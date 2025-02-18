@@ -1,0 +1,19 @@
+from .base import Base
+from .teachers import Teachers
+from .research_interests import ResearchInterests
+from .publications import Publications
+from .researchinterests_teachers import ResearchInterestsTeacher
+from .education import Education
+from .work_experience import WorkExperience
+from .publications_teachers import PublicationsTeacher
+
+__all__ = (
+    "Base",
+    "Teachers",
+    "Publications",
+    "ResearchInterests",
+    "ResearchInterestsTeacher",
+    "Education",
+    "WorkExperience",
+    "PublicationsTeacher",
+)
