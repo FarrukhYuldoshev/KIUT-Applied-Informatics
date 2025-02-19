@@ -6,6 +6,7 @@ from .researchinterests_teachers import ResearchInterestsTeacher
 from .education import Education
 from .work_experience import WorkExperience
 from .publications_teachers import PublicationsTeacher
+from .announcements import Announcements
 
 __all__ = (
     "Base",
@@ -16,4 +17,5 @@ __all__ = (
     "Education",
     "WorkExperience",
     "PublicationsTeacher",
+    "Announcements",
 )

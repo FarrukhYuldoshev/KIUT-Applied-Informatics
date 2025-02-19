@@ -17,7 +17,6 @@ class WorkExperience(Base):
         primary_key=True,
         default=uuid4,
         server_default=text("uuid_generate_v4()"),
-        index=True,
     )
     place: Mapped[str] = mapped_column(String(1024), nullable=False)
     role: Mapped[str] = mapped_column(String(256), nullable=True)

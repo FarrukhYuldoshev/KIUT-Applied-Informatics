@@ -15,23 +15,25 @@ from starlette import status
 from core.models.enumrators import Roles, RolesRate
 from .schemas import CreateTeacher, UpdateTeacher
 from pydantic import EmailStr, ValidationError
+
 UPLOAD_DIR = Pathlib("static/files")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-async def create_file(file: UploadFile):
+async def create_file(file: UploadFile, upload_path=UPLOAD_DIR) -> str:
     try:
         file_extension = file.filename.split(".")[-1]
         content_type = file.content_type
         if content_type.startswith("image/"):
             new_filename = f"{uuid.uuid4()}.{file_extension}"
-            file_path = UPLOAD_DIR / new_filename
+            file_path = upload_path / new_filename
+            print(file_path)
             async with aiofiles.open(file_path, "wb") as buffer:
                 await buffer.write(await file.read())
             return str(file_path)
         else:
             raise
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=starlette.status.HTTP_400_BAD_REQUEST,
             detail="File type not supported",

@@ -18,7 +18,6 @@ class Education(Base):
         primary_key=True,
         default=uuid4,
         server_default=text("uuid_generate_v4()"),
-        index=True,
     )
     place: Mapped[str] = mapped_column(String(1024), nullable=False)
     degree: Mapped[Degrees] = mapped_column(nullable=False)

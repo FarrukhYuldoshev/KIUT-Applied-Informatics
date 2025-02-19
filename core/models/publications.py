@@ -17,7 +17,6 @@ class Publications(Base):
         UUID(as_uuid=True),
         nullable=False,
         primary_key=True,
-        index=True,
         default=uuid4,
         server_default=text("uuid_generate_v4()"),
     )
