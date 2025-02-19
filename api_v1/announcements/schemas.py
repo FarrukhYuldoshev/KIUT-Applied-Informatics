@@ -3,6 +3,7 @@ from typing import List, Annotated
 from pydantic import BaseModel, Field
 from fastapi import UploadFile, Form, File
 from uuid import UUID
+from datetime import datetime
 
 
 class CreateAnnouncement:
@@ -26,3 +27,6 @@ class GetAnnouncement(BaseModel):
     title: Annotated[str, Field(description="Title of the announcement")]
     description: Annotated[str, Field(description="Description of the announcement")]
     images: Annotated[List[str], Field(description="Announcement's images")]
+    views: Annotated[int, Field(description="Announcement's views")]
+    created_at: Annotated[datetime, Field(description="Created at of the announcement")]
+    updated_at: Annotated[datetime, Field(description="Updated at of the announcement")]

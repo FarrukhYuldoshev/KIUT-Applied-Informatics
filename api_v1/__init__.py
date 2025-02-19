@@ -11,12 +11,12 @@ from .announcements import announcement_router
 router = APIRouter(prefix="/api/v1")
 
 
-@router.get("/{file_path:path}")
-async def get_file(file_path: str):
-    url_file = Path(file_path)
-    if url_file.exists() and url_file.is_file():
-        return FileResponse(url_file)
-    raise HTTPException(status_code=404, detail="File not found")
+# @router.get("/{file_path:path}")
+# async def get_file(file_path: str):
+#     url_file = Path(file_path)
+#     if url_file.exists() and url_file.is_file():
+#         return FileResponse(url_file)
+#     raise HTTPException(status_code=404, detail="File not found")
 
 
 router.include_router(announcement_router)
