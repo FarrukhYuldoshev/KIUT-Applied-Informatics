@@ -30,3 +30,11 @@ class GetAnnouncement(BaseModel):
     views: Annotated[int, Field(description="Announcement's views")]
     created_at: Annotated[datetime, Field(description="Created at of the announcement")]
     updated_at: Annotated[datetime, Field(description="Updated at of the announcement")]
+
+
+class DeleteAnnouncement(BaseModel):
+    uuid: Annotated[UUID, Field(description="UUID of the announcement")]
+
+
+class UpdateAnnouncement(CreateAnnouncement):
+    pass
