@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.models.enumrators import Languages
 from .schemas import (
     CreateAnnouncement,
     GetAnnouncement,
     UpdateAnnouncement,
     UploadImagesToUpdateAnnouncement,
     DeleteAnnouncement,
+    GetAnnouncementWithSelectedLanguage,
 )
 from core.settings import db_sessions
 from . import crud
@@ -13,24 +16,32 @@ from . import crud
 router = APIRouter(prefix="/announcements", tags=["Announcements"])
 
 
-@router.get("/", response_model=list[GetAnnouncement])
+@router.get(
+    "/",
+    response_model=list[GetAnnouncement] | list[GetAnnouncementWithSelectedLanguage],
+)
 async def get_announcements(
+    lang: Languages = Query(None, alias="lang"),
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
-    data = await crud.get_all_announcements(session=session)
+    data = await crud.get_all_announcements(session=session, lang=lang)
     return data
 
 
-@router.post("/", response_model=GetAnnouncement)
+@router.post("/", response_model=GetAnnouncementWithSelectedLanguage)
 async def create_announcement(
+    lang: Languages = Query(..., alias="lang"),
     data: CreateAnnouncement = Depends(CreateAnnouncement),
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
-    data = await crud.create_announcement(data=data, session=session)
+    data = await crud.create_announcement(data=data, session=session, lang=lang)
     return data
 
 
-@router.get("/{announcement_id}", response_model=GetAnnouncement)
+@router.get(
+    "/{announcement_id}",
+    response_model=GetAnnouncement | GetAnnouncementWithSelectedLanguage,
+)
 async def get_announcement(announcement=Depends(crud.get_announcement)):
     return announcement
 

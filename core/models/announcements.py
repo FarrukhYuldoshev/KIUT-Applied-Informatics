@@ -5,6 +5,7 @@ from sqlalchemy.orm import mapped_column, Mapped
 from uuid import uuid4
 from .base import Base
 import datetime
+from .enumrators import Languages
 
 
 class Announcements(Base):
@@ -15,11 +16,12 @@ class Announcements(Base):
         default=uuid4,
         server_default=text("uuid_generate_v4()"),
     )
-    title: Mapped[str] = mapped_column(String(256), nullable=False)
-    description: Mapped[str] = mapped_column(Text(), nullable=False)
     images: Mapped[List[str]] = mapped_column(JSONB, nullable=False, default=[])
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(), default=datetime.datetime.now(), nullable=False
+    )
+    translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
+        JSONB, nullable=False, default={}
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(),

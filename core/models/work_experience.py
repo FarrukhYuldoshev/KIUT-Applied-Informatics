@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-
 from sqlalchemy import UUID, text, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from uuid import uuid4
