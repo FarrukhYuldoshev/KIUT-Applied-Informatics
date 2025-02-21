@@ -132,7 +132,7 @@ async def update_publication(
     return publication
 
 
-async def delete_publication(session: AsyncSession, publication: Publications):
+async def delete_publications(session: AsyncSession, publication: Publications):
     stmt = delete(Publications).where(Publications.uuid == publication.uuid)
     await session.execute(stmt)
     await session.commit()

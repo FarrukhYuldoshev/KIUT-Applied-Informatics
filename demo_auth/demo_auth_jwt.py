@@ -26,7 +26,7 @@ router = APIRouter(
     prefix="/jwt-login", tags=["JWT-auth"], dependencies=[Depends(http_bearer)]
 )
 farrukh = User(
-    username="farrukh_yuldoshev",
+    username="admin",
     password=auth_utils.hash_password(password="12345"),
     email="communityfarrukh@gmail.com",
 )

@@ -1,5 +1,4 @@
 from typing import List
-
 from sqlalchemy import UUID, text, String, Text, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import mapped_column, Mapped
@@ -19,7 +18,6 @@ class Announcements(Base):
     title: Mapped[str] = mapped_column(String(256), nullable=False)
     description: Mapped[str] = mapped_column(Text(), nullable=False)
     images: Mapped[List[str]] = mapped_column(JSONB, nullable=False, default=[])
-    views: Mapped[int] = mapped_column(default=0, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(), default=datetime.datetime.now(), nullable=False
     )

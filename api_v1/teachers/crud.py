@@ -97,7 +97,7 @@ async def update_teacher(
             EmailStr._validate(data.email)
         except Exception:
             raise HTTPException(status_code=422, detail="Invalid email adress")
-    if not isinstance(data.image, str):
+    if not isinstance(data.image, str) and data.image is not None:
         file = await create_file(data.image)
         data.image = file
         if Pathlib(teacher.image).exists():
@@ -107,6 +107,8 @@ async def update_teacher(
             if key == "image":
                 if len(value) == 0:
                     continue
+            elif key == "role":
+                value = Roles(value)
             print(key, type(value))
             setattr(teacher, key, value)
     await session.commit()
