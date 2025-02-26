@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9f055030d42c
+Revision ID: 98bdd3f8d787
 Revises: 
-Create Date: 2025-02-26 11:13:50.238405
+Create Date: 2025-02-26 19:46:57.073338
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "9f055030d42c"
+revision: str = "98bdd3f8d787"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -157,22 +157,19 @@ def upgrade() -> None:
             server_default=sa.text("uuid_generate_v4()"),
             nullable=False,
         ),
-        sa.Column("place", sa.String(length=1024), nullable=False),
-        sa.Column("role", sa.String(length=256), nullable=True),
         sa.Column("from_date", sa.Date(), nullable=False),
         sa.Column("to_date", sa.Date(), nullable=False),
         sa.Column("teacher_id", sa.UUID(), nullable=False),
+        sa.Column(
+            "translations",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["teacher_id"],
             ["teachers.uuid"],
         ),
         sa.PrimaryKeyConstraint("uuid"),
-        sa.UniqueConstraint(
-            "place",
-            "role",
-            "teacher_id",
-            name="work_experience_title_teacher_id_uidx",
-        ),
     )
     # ### end Alembic commands ###
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, EmailStr
 from uuid import UUID as UUID4
 from api_v1.educations.schemas import GetEducationWithoutTeacher
 from api_v1.publications.schemas import GetPublicationWithoutTeacher
-from api_v1.work_experience.schemas import GetWorkExperienceWithoutTeacher
+from api_v1.work_experience.schemas import GetWorkExperience
 
 
 class OnlyUUID(BaseModel):
@@ -55,7 +55,7 @@ class GetTeachersWithResearchInterests(GetTeachers):
         List["GetPublicationWithoutTeacher"], Field(serialization_alias="publications")
     ]
     work_experiences: Annotated[
-        List["GetWorkExperienceWithoutTeacher"],
+        List["GetWorkExperience"],
         Field(serialization_alias="work_experiences"),
     ]
     educations: Annotated[

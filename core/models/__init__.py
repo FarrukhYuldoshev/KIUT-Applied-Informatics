@@ -14,8 +14,8 @@ __all__ = (
     "Publications",
     "ResearchInterests",
     "ResearchInterestsTeacher",
-    "Education",
     "WorkExperience",
+    "Education",
     "PublicationsTeacher",
     "Announcements",
 )
