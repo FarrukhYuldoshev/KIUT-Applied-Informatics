@@ -42,10 +42,23 @@ class DeleteAnnouncement(BaseModel):
     uuids: set[UUID]
 
 
+class UpdateDetails(BaseModel):
+    title: str = Field(min_length=5)
+    description: str = Field(min_length=5)
+
+
 class UpdateAnnouncement(BaseModel):
-    title: Optional[str] = Field(None, min_length=5)
-    description: Optional[str] = Field(None, min_length=5)
-    images: List[str] | None = None
+    images: List[str] | None = Field(
+        None, description="Announcement's images", min_length=1
+    )
+    translations: dict[Languages, UpdateDetails] | None = Field(
+        default=None,
+        example={
+            lang.value: {"title": "text", "description": "text"} for lang in Languages
+        },
+        description=f"Allowed keys: {[lang.value for lang in Languages]}",
+        min_length=1,
+    )
 
 
 class UploadImagesToUpdateAnnouncement:

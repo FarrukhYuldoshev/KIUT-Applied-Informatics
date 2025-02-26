@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: af4740c3e453
+Revision ID: 9f055030d42c
 Revises: 
-Create Date: 2025-02-19 15:41:23.754955
+Create Date: 2025-02-26 11:13:50.238405
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "af4740c3e453"
+revision: str = "9f055030d42c"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,13 +29,15 @@ def upgrade() -> None:
             server_default=sa.text("uuid_generate_v4()"),
             nullable=False,
         ),
-        sa.Column("title", sa.String(length=256), nullable=False),
-        sa.Column("description", sa.Text(), nullable=False),
         sa.Column(
             "images", postgresql.JSONB(astext_type=sa.Text()), nullable=False
         ),
-        sa.Column("views", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column(
+            "translations",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("uuid"),
     )
@@ -100,25 +102,18 @@ def upgrade() -> None:
             server_default=sa.text("uuid_generate_v4()"),
             nullable=False,
         ),
-        sa.Column("place", sa.String(length=1024), nullable=False),
-        sa.Column(
-            "degree",
-            sa.Enum("Bsc", "Dsc", "Phd", name="degrees"),
-            nullable=False,
-        ),
         sa.Column("from_date", sa.Date(), nullable=False),
         sa.Column("to_date", sa.Date(), nullable=False),
         sa.Column("teacher_id", sa.UUID(), nullable=False),
+        sa.Column(
+            "translations",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["teacher_id"], ["teachers.uuid"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("uuid"),
-        sa.UniqueConstraint(
-            "place",
-            "teacher_id",
-            "degree",
-            name="educations_title_teacher_id_uidx",
-        ),
     )
     op.create_table(
         "publications_teachers",

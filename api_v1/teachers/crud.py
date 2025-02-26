@@ -71,8 +71,8 @@ async def create_teacher(session: AsyncSession, data: CreateTeacher) -> Teachers
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        if Path(data.image).exists():
-            Path(data.image).unlink()
+        if Pathlib(data.image).exists():
+            Pathlib(data.image).unlink()
         if e.orig.__str__().startswith(
             "<class 'asyncpg.exceptions.UniqueViolationError'>"
         ):

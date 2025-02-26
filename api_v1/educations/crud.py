@@ -1,10 +1,16 @@
-from sqlalchemy import select, ScalarResult, delete
+from typing import Annotated, Iterable
+
+from fastapi.params import Query
+from sqlalchemy import select, ScalarResult, delete, insert, Row, Sequence, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 from core.models import Education, Teachers
-from fastapi import HTTPException
+from core.settings import db_sessions
+from fastapi import HTTPException, Depends, Path
 from uuid import UUID
+
+from core.models.enumrators import Languages
 from .schemas import (
     CreateEducation,
     UpdateEducation,
@@ -13,87 +19,147 @@ from starlette import status
 
 
 async def create_education(session: AsyncSession, data: CreateEducation):
-    edu: Education = Education(**data.__dict__)
-    stmt = select(Teachers).where(Teachers.uuid == data.teacher_id)
-    teacher = await session.scalar(stmt)
-    if teacher is None:
+    translation: dict[Languages, dict[str, str]] = {
+        data.lang: {"place": data.place, "degree": data.degree.value}
+    }
+    stmt = select(Teachers.uuid).where(Teachers.uuid == data.teacher_id)
+    teacher_id = await session.scalar(stmt)
+    if teacher_id is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
     else:
-        edu.teacher = teacher
-        session.add(edu)
-        try:
-            await session.commit()
-        except IntegrityError as e:
-            await session.rollback()
-            if e.orig.__str__().startswith(
-                "<class 'asyncpg.exceptions.UniqueViolationError'>"
-            ):
-                detail = {
-                    "code": "unique_violation",
-                    "message": "The values already exist",
-                    "details": e.params.__str__(),
-                }
-                raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
-            else:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Database error")
-        return edu
+        stmt = (
+            insert(Education)
+            .values(
+                from_date=data.from_date,
+                to_date=data.to_date,
+                teacher_id=teacher_id,
+                translations=translation,
+            )
+            .returning(
+                Education.uuid,
+                Education.translations[data.lang.value]["place"].label("place"),
+                Education.translations[data.lang.value]["degree"].label("degree"),
+                Education.from_date,
+                Education.to_date,
+                Education.teacher_id,
+            )
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        return result.one()
 
 
 async def get_educations_of_teacher(
-    session: AsyncSession, teacher_id: UUID
-) -> ScalarResult[Education]:
-    stmt = select(Education).where(Education.teacher_id == teacher_id)
-    educations = await session.scalars(stmt)
-    return educations
+    teacher_id: UUID,
+    session: AsyncSession,
+    lang: Languages = None,
+):
+    if lang is None:
+        stmt = select(Education).where(Education.teacher_id == teacher_id)
+        result = await session.scalars(stmt)
+        return result
+    else:
+        stmt = select(
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.translations[lang.value]["place"].label("place"),
+            Education.translations[lang.value]["degree"].label("degree"),
+            Education.teacher_id,
+        )
+        result = await session.execute(stmt)
+        return result.all()
 
 
-async def get_education(session: AsyncSession, edu_id: UUID) -> Education:
-    stmt = (
-        select(Education)
-        .where(Education.uuid == edu_id)
-        .options(joinedload(Education.teacher))
-    )
-    edu = await session.scalar(stmt)
+async def get_education(
+    edu_id: Annotated[UUID, Path(alias="education_id")],
+    lang: Annotated[Languages, Query(alias="lang")] = None,
+    session: AsyncSession = Depends(db_sessions.session_dependency),
+) -> Row:
+    if lang is None:
+        stmt = select(
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.teacher_id,
+            Education.translations,
+        ).where(Education.uuid == edu_id)
+        result = await session.execute(stmt)
+        edu = result.one_or_none()
+    else:
+        stmt = select(
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.translations[lang.value]["place"].label("place"),
+            Education.translations[lang.value]["degree"].label("degree"),
+            Education.teacher_id,
+        ).where(Education.uuid == edu_id)
+        result = await session.execute(stmt)
+        edu = result.one_or_none()
+        print(edu)
     if edu is None:
-        raise HTTPException(status_code=404, detail=f"Education not found: {edu_id}")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Education not found")
     else:
         return edu
 
 
-async def get_all_educations(session: AsyncSession) -> ScalarResult[Education]:
-    stmt = select(Education).options(joinedload(Education.teacher))
-    educations = await session.scalars(stmt)
-    return educations
+async def get_all_educations(
+    session: AsyncSession, lang: Languages = None
+) -> Sequence[Row]:
+    if lang is None:
+        stmt = select(
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.teacher_id,
+            Education.translations,
+        )
+        edu = await session.execute(stmt)
+    else:
+        stmt = select(
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.translations[lang.value]["place"].label("place"),
+            Education.translations[lang.value]["degree"].label("degree"),
+            Education.teacher_id,
+        )
+        edu = await session.execute(stmt)
+    return edu.all()
 
 
 async def update_education(
-    session: AsyncSession, data: UpdateEducation, edu_uuid: UUID, partial=False
+    session: AsyncSession, data: UpdateEducation, education: Row
 ):
-    edu: Education = await get_education(session=session, edu_id=edu_uuid)
-    print(edu)
-    for k, v in data.model_dump(exclude_unset=partial).items():
-        setattr(edu, k, v)
-    try:
-        await session.commit()
-    except IntegrityError as e:
-        if e.orig.__str__().startswith(
-            "<class 'asyncpg.exceptions.ForeignKeyViolationError'>"
-        ):
-            await session.rollback()
-            detail = {
-                "message": "Teacher not found",
-                "details": e.params.__str__(),
-            }
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=detail)
-        else:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bad request")
-    return edu
+    if data.teacher_id is not None:
+        stmt = select(Teachers.uuid).where(Teachers.uuid == data.teacher_id)
+        result = await session.scalar(stmt)
+        if result is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Teacher not found")
 
-
-async def delete_education(session: AsyncSession, edu_id: UUID):
-    edu = await get_education(session=session, edu_id=edu_id)
-    stmt = delete(Education).where(Education.uuid == edu.uuid)
-    await session.execute(stmt)
+    existing_edu_id = education.__getattr__("uuid")
+    stmt = (
+        update(Education)
+        .values(**data.model_dump(exclude_unset=True))
+        .where(Education.uuid == existing_edu_id)
+    ).returning(Education)
+    result = await session.scalar(stmt)
     await session.commit()
+    return result
+
+
+async def delete_education(session: AsyncSession, uuids: set[UUID]):
+    stmt = select(Education.uuid).where(Education.uuid.in_(uuids))
+    result = await session.scalars(stmt)
+    existing_uuids = set(result)
+    if missing := uuids - existing_uuids:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=f"Missing UUIDs: {missing}"
+        )
+    else:
+        stmt = delete(Education).where(Education.uuid.in_(uuids))
+        await session.execute(stmt)
+        await session.commit()

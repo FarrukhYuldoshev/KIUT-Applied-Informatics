@@ -70,18 +70,6 @@ async def update_announcement(
     return result
 
 
-@router.put("/{announcement_id}", response_model=GetAnnouncement)
-async def update_announcement(
-    data: UpdateAnnouncement,
-    announcement=Depends(crud.get_announcement),
-    session: AsyncSession = Depends(db_sessions.session_dependency),
-):
-    result = await crud.update_announcement(
-        data=data, announcement=announcement, session=session, partial=False
-    )
-    return result
-
-
 @router.delete("/", status_code=204)
 async def delete_announcement(
     data: DeleteAnnouncement,

@@ -1,7 +1,7 @@
 import enum
 
 
-class Languages(enum.Enum):
+class Languages(str, enum.Enum):
     uz = "uz"
     ru = "ru"
     en = "en"

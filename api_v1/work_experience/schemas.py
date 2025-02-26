@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional, List, Annotated
 from uuid import UUID
-from core.models.enumrators import Roles, Degrees
+from core.models.enumrators import Roles, DegreesEn
 
 
 class GetTeacher(BaseModel):

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from .teachers import router as teacher_router
 from .research_interests import router as research_interests_router
+
 from .educations import router as education_router
 from .work_experience import router as work_experience_router
 from .publications import router as publications_router

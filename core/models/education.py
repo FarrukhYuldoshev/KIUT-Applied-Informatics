@@ -1,11 +1,12 @@
 from typing import TYPE_CHECKING
-
-from sqlalchemy import UUID, text, String, ForeignKey, UniqueConstraint
+from sqlalchemy import UUID, text, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from uuid import uuid4
 from . import Base
 from datetime import date
-from .enumrators import Degrees
+
+from .enumrators import Languages
 
 if TYPE_CHECKING:
     from . import Teachers
@@ -19,16 +20,12 @@ class Education(Base):
         default=uuid4,
         server_default=text("uuid_generate_v4()"),
     )
-    place: Mapped[str] = mapped_column(String(1024), nullable=False)
-    degree: Mapped[Degrees] = mapped_column(nullable=False)
     from_date: Mapped[date] = mapped_column(nullable=False)
     to_date: Mapped[date] = mapped_column(nullable=False)
     teacher_id: Mapped[str] = mapped_column(
-        ForeignKey("teachers.uuid", ondelete="CASCADE")
+        UUID(as_uuid=True), ForeignKey("teachers.uuid", ondelete="CASCADE")
+    )
+    translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
+        JSONB, default={}
     )
     teacher: Mapped["Teachers"] = relationship(back_populates="educations")
-    __table_args__ = (
-        UniqueConstraint(
-            "place", "teacher_id", "degree", name="educations_title_teacher_id_uidx"
-        ),
-    )

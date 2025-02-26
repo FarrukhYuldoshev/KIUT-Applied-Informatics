@@ -1,10 +1,6 @@
 from typing import Annotated, Any, Sequence
-
-from fastapi.params import Query
-from sqlalchemy import Row, update
-from fastapi import HTTPException, Path, Depends
-from sqlalchemy import insert, select, delete, and_
-from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException, Path, Depends, Query
+from sqlalchemy import insert, select, delete, and_, update, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from api_v1.teachers.crud import create_file
 from core.models.enumrators import Languages
@@ -150,19 +146,25 @@ async def append_images(
 
 
 async def update_announcement(
-    announcement: Announcements,
+    announcement: Row,
     data: UpdateAnnouncement,
     session: AsyncSession,
-    partial=True,
 ):
-    for k, v in data.model_dump(exclude_unset=partial).items():
-        setattr(announcement, k, v)
-    session.add(announcement)
-    try:
-        await session.commit()
-    except IntegrityError as e:
-        raise HTTPException(status_code=400, detail="Bad request")
-    return announcement
+    stmt = (
+        update(Announcements)
+        .values(**data.model_dump(exclude_unset=True))
+        .where(Announcements.uuid == announcement.__getattr__("uuid"))
+        .returning(
+            Announcements.uuid,
+            Announcements.images,
+            Announcements.created_at,
+            Announcements.updated_at,
+            Announcements.translations,
+        )
+    )
+    result = await session.execute(stmt)
+    await session.commit()
+    return result.one()
 
 
 async def delete_announcement(data: DeleteAnnouncement, session: AsyncSession):
