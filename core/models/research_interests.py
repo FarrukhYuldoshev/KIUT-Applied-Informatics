@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, ForeignKey, UUID, func, text
+from sqlalchemy import UUID, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from . import Base
 from uuid import uuid4
+from .enumrators import Languages
 
 if TYPE_CHECKING:
     from . import ResearchInterestsTeacher
@@ -20,9 +21,11 @@ class ResearchInterests(Base):
         default=uuid4,
         server_default=text("uuid_generate_v4()"),
     )
-    title: Mapped[str] = mapped_column(String(256), nullable=False, unique=True)
     teachers: Mapped[list["ResearchInterestsTeacher"]] = relationship(
         back_populates="research_interest"
+    )
+    translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
+        JSONB, default={}
     )
     teachers_viewonly: Mapped[list["Teachers"]] = relationship(
         back_populates="research_interest_viewonly",

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 98bdd3f8d787
+Revision ID: 86879d3fc1f0
 Revises: 
-Create Date: 2025-02-26 19:46:57.073338
+Create Date: 2025-02-27 18:20:36.391110
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "98bdd3f8d787"
+revision: str = "86879d3fc1f0"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -62,9 +62,12 @@ def upgrade() -> None:
             server_default=sa.text("uuid_generate_v4()"),
             nullable=False,
         ),
-        sa.Column("title", sa.String(length=256), nullable=False),
+        sa.Column(
+            "translations",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("uuid"),
-        sa.UniqueConstraint("title"),
     )
     op.create_table(
         "teachers",

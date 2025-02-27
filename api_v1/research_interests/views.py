@@ -1,6 +1,6 @@
 from pathlib import Path
-from typing import Annotated, Optional
-from fastapi import Path as PathParameter
+from typing import Annotated, Optional, List
+from fastapi import Path as PathParameter, Form
 from fastapi import (
     APIRouter,
     Depends,
@@ -33,12 +33,12 @@ router = APIRouter(prefix="/teachers", tags=["Teachers API (research interests)"
     response_model_exclude_unset=True,
 )
 async def create_research_interests(
-    research_interests: list[CreateResearchInterests],
     session: Annotated[AsyncSession, Depends(db_sessions.session_dependency)],
-    user = Depends(get_active_user),
+    data: CreateResearchInterests = Depends(CreateResearchInterests),
+    user=Depends(get_active_user),
 ):
-    result = await crud.create_research_interests(session, research_interests)
-    print(result)
+
+    result = await crud.create_research_interests(session, data=data)
     return result
 
 
@@ -49,7 +49,7 @@ async def set_research_interests_to_teacher(
     data: list[GetResearchInterests],
     teacher_id: uuid.UUID,
     session: Annotated[AsyncSession, Depends(db_sessions.session_dependency)],
-    user = Depends(get_active_user),
+    user=Depends(get_active_user),
 ):
     result = await crud.set_research_interests_to_teacher(
         in_r=data, teacher_id=teacher_id, session=session
@@ -88,7 +88,7 @@ async def update_research_interests_partial(
     uuid4: Annotated[uuid.UUID, Query(..., description="uuid of research interests")],
     data: UpdateResearchInterests,
     session: AsyncSession = Depends(db_sessions.session_dependency),
-    user = Depends(get_active_user),
+    user=Depends(get_active_user),
 ):
     result = await crud.update_research_interests(
         uuid4=uuid4, session=session, data=data
@@ -102,7 +102,7 @@ async def delete_research_interest(
         uuid.UUID, PathParameter(..., description="UUID of research interest")
     ],
     session: AsyncSession = Depends(db_sessions.session_dependency),
-    user = Depends(get_active_user),
+    user=Depends(get_active_user),
 ):
     await crud.delete_research_interest(uuid4=uuid4, session=session)
 
@@ -119,7 +119,7 @@ async def delete_research_interests(
     ] = None,
     data=Depends(crud.get_list_of_research_interests),
     session: AsyncSession = Depends(db_sessions.session_dependency),
-    user = Depends(get_active_user),
+    user=Depends(get_active_user),
 ):
     if teacher_id is None:
         await crud.delete_research_interests(data=data, session=session)

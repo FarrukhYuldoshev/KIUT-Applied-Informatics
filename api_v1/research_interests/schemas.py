@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 import uuid as UUID
 from api_v1.teachers.schemas import GetTeachersWithResearchInterests
 import enum
+from fastapi import Form, Query
+from core.models.enumrators import Languages
 
 
 class OrderingResearchInterests(enum.Enum):
@@ -15,27 +17,31 @@ class OnlyUUID(BaseModel):
     uuid: UUID.UUID = Field(...)
 
 
-class CreateResearchInterests(BaseModel):
-    title: Annotated[
-        str,
-        Field(
-            default="title",
-            min_length=10,
-            max_length=256,
-            description="minimum 10 characters",
-        ),
-    ]
+class CreateResearchInterests:
+    def __init__(
+        self,
+        lang: Annotated[Languages, Query(..., alias="lang")],
+        title: Annotated[
+            List[str],
+            Form(
+                max_length=256,
+                description="minimum 10 characters",
+            ),
+        ] = ["title"],
+    ):
+        self.title = title
+        self.lang = lang
 
 
-class GetResearchInterestsWithTeacher(CreateResearchInterests):
+class GetResearchInterestsWithTeacher(BaseModel):
     uuid: UUID.UUID
     teachers_viewonly: Annotated[List[OnlyUUID], Field(serialization_alias="teachers")]
 
 
-class GetResearchInterests(CreateResearchInterests):
+class GetResearchInterests(BaseModel):
     title: Optional[str] = None
     uuid: UUID.UUID
-    count: Optional[int] = None
+    in_teacher_count: Optional[int] = None
 
 
 class GetResearchInterestsWithoutTeacher(BaseModel):
@@ -43,7 +49,7 @@ class GetResearchInterestsWithoutTeacher(BaseModel):
     uuid: UUID.UUID
 
 
-class UpdateResearchInterests(CreateResearchInterests):
+class UpdateResearchInterests(BaseModel):
     pass
 
 

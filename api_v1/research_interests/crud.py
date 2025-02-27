@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 
+from core.models.enumrators import Languages
 from core.settings import db_sessions
 from core.models import (
     ResearchInterests,
@@ -37,18 +38,56 @@ async def get_teacher_or_none(
         return result
 
 
+# async def chech_unique_constraint(title: dict[Languages, dict[str, str]]):
+#     stmt = select(ResearchInterests).where(
+#         ResearchInterests.translations["uz"]["title"] == title[Languages.uz]["title"],
+#         ResearchInterests.translations["ru"]["title"] == title[Languages.uz]["title"],
+#         ResearchInterests.translations["en"]["title"] == title[Languages.uz]["title"],
+#     )
+
+
 async def create_research_interests(
     session: AsyncSession,
-    in_r: list[CreateResearchInterests],
-) -> ScalarResult[ResearchInterests]:
+    data: CreateResearchInterests,
+) -> Row:
     stmt = (
         insert(ResearchInterests)
-        .values([item.model_dump() for item in in_r])
-        .returning(ResearchInterests)
+        .values(
+            [
+                {"translations": {data.lang: {"title": value}}}
+                for value in data.title[0].split(",")
+            ]
+        )
+        .returning(
+            ResearchInterests.uuid.label("uuid"),
+            ResearchInterests.translations[data.lang]["title"].label("title"),
+        )
     )
-    result = await session.scalars(stmt)
-    await session.commit()
-    return result
+    try:
+        result = await session.execute(stmt)
+        await session.commit()
+    except IntegrityError as e:
+        await session.rollback()
+        if e.orig.__str__().startswith(
+            "<class 'asyncpg.exceptions.UniqueViolationError'>"
+        ):
+            detail = {
+                "code": "unique_violation",
+                "message": "The publication(s) were/was already in use.",
+                "details": e.params.__str__(),
+            }
+            raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
+        else:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Database error")
+    # stmt = (
+    #     insert(ResearchInterests)
+    #     .values([item.model_dump() for item in in_r])
+    #     .returning(ResearchInterests)
+    # )
+    # result = await session.scalars(stmt)
+    # await session.commit()
+    # return result
+    return result.all()
 
 
 async def set_research_interests_to_teacher(

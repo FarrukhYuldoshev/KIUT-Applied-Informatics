@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi.params import Query
 from sqlalchemy import select, delete, insert, Row, Sequence, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models import WorkExperience, Teachers
+from core.models import Education, Teachers
 from core.settings import db_sessions
 from fastapi import HTTPException, Depends, Path
 from uuid import UUID
@@ -27,7 +27,7 @@ async def create_education(session: AsyncSession, data: CreateEducation):
         )
     else:
         stmt = (
-            insert(WorkExperience)
+            insert(Education)
             .values(
                 from_date=data.from_date,
                 to_date=data.to_date,
@@ -35,12 +35,12 @@ async def create_education(session: AsyncSession, data: CreateEducation):
                 translations=translation,
             )
             .returning(
-                WorkExperience.uuid,
-                WorkExperience.translations[data.lang.value]["place"].label("place"),
-                WorkExperience.translations[data.lang.value]["degree"].label("degree"),
-                WorkExperience.from_date,
-                WorkExperience.to_date,
-                WorkExperience.teacher_id,
+                Education.uuid,
+                Education.translations[data.lang.value]["place"].label("place"),
+                Education.translations[data.lang.value]["degree"].label("degree"),
+                Education.from_date,
+                Education.to_date,
+                Education.teacher_id,
             )
         )
         result = await session.execute(stmt)
@@ -54,17 +54,17 @@ async def get_educations_of_teacher(
     lang: Languages = None,
 ):
     if lang is None:
-        stmt = select(WorkExperience).where(WorkExperience.teacher_id == teacher_id)
+        stmt = select(Education).where(Education.teacher_id == teacher_id)
         result = await session.scalars(stmt)
         return result
     else:
         stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.translations[lang.value]["place"].label("place"),
-            WorkExperience.translations[lang.value]["degree"].label("degree"),
-            WorkExperience.teacher_id,
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.translations[lang.value]["place"].label("place"),
+            Education.translations[lang.value]["degree"].label("degree"),
+            Education.teacher_id,
         )
         result = await session.execute(stmt)
         return result.all()
@@ -77,23 +77,23 @@ async def get_education(
 ) -> Row:
     if lang is None:
         stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.teacher_id,
-            WorkExperience.translations,
-        ).where(WorkExperience.uuid == edu_id)
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.teacher_id,
+            Education.translations,
+        ).where(Education.uuid == edu_id)
         result = await session.execute(stmt)
         edu = result.one_or_none()
     else:
         stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.translations[lang.value]["place"].label("place"),
-            WorkExperience.translations[lang.value]["degree"].label("degree"),
-            WorkExperience.teacher_id,
-        ).where(WorkExperience.uuid == edu_id)
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.translations[lang.value]["place"].label("place"),
+            Education.translations[lang.value]["degree"].label("degree"),
+            Education.teacher_id,
+        ).where(Education.uuid == edu_id)
         result = await session.execute(stmt)
         edu = result.one_or_none()
         print(edu)
@@ -108,21 +108,21 @@ async def get_all_educations(
 ) -> Sequence[Row]:
     if lang is None:
         stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.teacher_id,
-            WorkExperience.translations,
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.teacher_id,
+            Education.translations,
         )
         edu = await session.execute(stmt)
     else:
         stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.translations[lang.value]["place"].label("place"),
-            WorkExperience.translations[lang.value]["degree"].label("degree"),
-            WorkExperience.teacher_id,
+            Education.uuid,
+            Education.from_date,
+            Education.to_date,
+            Education.translations[lang.value]["place"].label("place"),
+            Education.translations[lang.value]["degree"].label("degree"),
+            Education.teacher_id,
         )
         edu = await session.execute(stmt)
     return edu.all()
@@ -139,17 +139,17 @@ async def update_education(
 
     existing_edu_id = education.__getattr__("uuid")
     stmt = (
-        update(WorkExperience)
+        update(Education)
         .values(**data.model_dump(exclude_unset=True))
-        .where(WorkExperience.uuid == existing_edu_id)
-    ).returning(WorkExperience)
+        .where(Education.uuid == existing_edu_id)
+    ).returning(Education)
     result = await session.scalar(stmt)
     await session.commit()
     return result
 
 
 async def delete_education(session: AsyncSession, uuids: set[UUID]):
-    stmt = select(WorkExperience.uuid).where(WorkExperience.uuid.in_(uuids))
+    stmt = select(Education.uuid).where(Education.uuid.in_(uuids))
     result = await session.scalars(stmt)
     existing_uuids = set(result)
     if missing := uuids - existing_uuids:
@@ -157,6 +157,6 @@ async def delete_education(session: AsyncSession, uuids: set[UUID]):
             status.HTTP_400_BAD_REQUEST, detail=f"Missing UUIDs: {missing}"
         )
     else:
-        stmt = delete(WorkExperience).where(WorkExperience.uuid.in_(uuids))
+        stmt = delete(Education).where(Education.uuid.in_(uuids))
         await session.execute(stmt)
         await session.commit()
