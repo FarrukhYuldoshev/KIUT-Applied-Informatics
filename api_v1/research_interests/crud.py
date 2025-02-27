@@ -16,13 +16,13 @@ from fastapi import HTTPException, Depends
 from starlette import status
 from .schemas import (
     CreateResearchInterests,
+    ResearchInterestsOnlyUUID,
     GetResearchInterests,
     UpdateResearchInterests,
     GetResearchInterestsWithTeacher,
     DeleteResearchInterests,
     OrderingResearchInterests,
 )
-from api_v1.teachers.crud import get_teacher_or_none as get_teacher
 
 
 async def get_teacher_or_none(
@@ -91,12 +91,12 @@ async def create_research_interests(
 
 
 async def set_research_interests_to_teacher(
-    in_r: list[GetResearchInterests],
+    in_r: ResearchInterestsOnlyUUID,
     session: AsyncSession,
     teacher_id: Annotated[uuid.UUID, ...],
 ) -> Teachers:
     teacher = await get_teacher_or_none(session=session, teacher_id=teacher_id)
-    value = set(item.uuid for item in in_r)
+    value = set(uuid4 for uuid4 in in_r.research_interests)
     stmt = select(ResearchInterests).where(ResearchInterests.uuid.in_(value))
     researchs = await session.scalars(stmt)
     existing_uuids = set(item.uuid for item in researchs)

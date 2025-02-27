@@ -6,7 +6,6 @@ import enum
 from fastapi import Form, Query
 from core.models.enumrators import Languages
 
-
 class OrderingResearchInterests(enum.Enum):
     by_title = "title"
     by_most_used = "most_used"
@@ -15,6 +14,10 @@ class OrderingResearchInterests(enum.Enum):
 
 class OnlyUUID(BaseModel):
     uuid: UUID.UUID = Field(...)
+
+
+class ResearchInterestsOnlyUUID(BaseModel):
+    research_interests: List[UUID.UUID]
 
 
 class CreateResearchInterests:
@@ -32,6 +35,8 @@ class CreateResearchInterests:
         self.title = title
         self.lang = lang
 
+class TeacherWithResearchInterest(BaseModel):
+    research_interests_viewonly: List[]
 
 class GetResearchInterestsWithTeacher(BaseModel):
     uuid: UUID.UUID

@@ -17,8 +17,8 @@ from .schemas import (
     DeleteResearchInterests,
     GetResearchInterestsWithTeacher,
     OrderingResearchInterests,
+    ResearchInterestsOnlyUUID,
 )
-from api_v1.teachers.schemas import GetTeachersWithResearchInterests
 from . import crud
 from demo_auth import get_active_user
 import uuid
@@ -46,7 +46,7 @@ async def create_research_interests(
     "/research-interests/{teacher_id}", response_model=GetTeachersWithResearchInterests
 )
 async def set_research_interests_to_teacher(
-    data: list[GetResearchInterests],
+    data: ResearchInterestsOnlyUUID,
     teacher_id: uuid.UUID,
     session: Annotated[AsyncSession, Depends(db_sessions.session_dependency)],
     user=Depends(get_active_user),
