@@ -7,6 +7,7 @@ from fastapi import (
     Query,
 )
 
+from core.models.enumrators import Languages
 from core.settings import db_sessions
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -43,7 +44,7 @@ async def create_research_interests(
 
 
 @router.post(
-    "/research-interests/{teacher_id}", response_model=GetTeachersWithResearchInterests
+    "/research-interests/{teacher_id}", response_model=GetResearchInterestsWithTeacher
 )
 async def set_research_interests_to_teacher(
     data: ResearchInterestsOnlyUUID,
@@ -67,9 +68,13 @@ async def get_all_research_interests(
     order_by: Annotated[
         OrderingResearchInterests, Query(description="only 3 parametres have")
     ] = None,
+    lang: Languages = None,
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
-    result = await crud.get_all_research_interests(session, order_by=order_by)
+    result = await crud.get_all_research_interests(
+        session, order_by=order_by, lang=lang
+    )
+    print(result)
     return result
 
 

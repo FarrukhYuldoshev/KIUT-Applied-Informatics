@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Sequence
+from typing import Annotated, Sequence, Any, Coroutine
 from sqlalchemy import select, insert, ScalarResult, update, delete, and_, func, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -22,13 +22,18 @@ from .schemas import (
     GetResearchInterestsWithTeacher,
     DeleteResearchInterests,
     OrderingResearchInterests,
+    GetResearchInterestsSelectedLanguage,
 )
 
 
 async def get_teacher_or_none(
     session: AsyncSession, teacher_id: Annotated[uuid.UUID, ...]
-) -> str | None:
-    stmt = select(Teachers.uuid).where(Teachers.uuid == teacher_id)
+) -> Teachers:
+    stmt = (
+        select(Teachers)
+        .options(selectinload(Teachers.research_interest_viewonly))
+        .where(Teachers.uuid == teacher_id)
+    )
     result = await session.scalar(stmt)
     if result is None:
         raise HTTPException(
@@ -103,7 +108,7 @@ async def set_research_interests_to_teacher(
     if missing := value - existing_uuids:
         raise HTTPException(400, f"Invalid UUIDs: {missing}")
     re_t = [
-        ResearchInterestsTeacher(teacher_id=teacher, research_interests_id=obj)
+        ResearchInterestsTeacher(teacher=teacher, research_interests_id=obj)
         for obj in existing_uuids
     ]
     session.add_all(re_t)
@@ -122,18 +127,27 @@ async def set_research_interests_to_teacher(
             raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Database error")
-    teacher = await get_teacher(session=session, teacher_id=teacher_id)
+    await session.refresh(teacher)
     return teacher
 
 
 async def get_all_research_interests(
     session: AsyncSession,
+    lang: Languages = None,
     order_by: OrderingResearchInterests = None,
 ):
+    research_interests_fields = [ResearchInterests]
+    if lang is not None:
+        research_interests_fields = [
+            ResearchInterests.uuid.label("uuid"),
+            ResearchInterests.translations[lang]["title"].label("title"),
+        ]
     cte = (
         select(
-            ResearchInterests,
-            func.count(ResearchInterestsTeacher.research_interests_id).label("count"),
+            *research_interests_fields,
+            func.count(ResearchInterestsTeacher.research_interests_id).label(
+                "using_count"
+            ),
         )
         .join(
             ResearchInterestsTeacher,
@@ -145,26 +159,46 @@ async def get_all_research_interests(
     )
     if order_by is not None:
         if order_by == OrderingResearchInterests.by_title:
-            return await session.scalars(
-                select(ResearchInterests).order_by(ResearchInterests.title)
-            )
+            if lang is None:
+                stmt = select(*research_interests_fields)
+                result = await session.scalars(stmt)
+                return result
+            else:
+                stmt = select(*research_interests_fields).order_by(
+                    ResearchInterests.translations[lang]["title"]
+                )
+                result = await session.execute(stmt)
+                return result.all()
         elif order_by == OrderingResearchInterests.by_most_used:
-            result = await session.execute(select(cte).order_by(cte.c.count.desc()))
+            result = await session.execute(
+                select(cte).order_by(cte.c.using_count.desc())
+            )
             return result.all()
         else:
             result = await session.execute(
-                select(cte).order_by(cte.c.count.desc(), cte.c.title.asc())
+                select(cte).order_by(cte.c.using_count.desc(), cte.c.title.asc())
             )
             return result.all()
     else:
-        stmt = select(ResearchInterests)
-        result = await session.scalars(stmt)
-        return result
+        stmt = select(*research_interests_fields)
+        if lang is not None:
+            result = await session.execute(stmt)
+            return result.all()
+        else:
+            result = await session.scalars(stmt)
+            return result
 
 
 async def get_one_research_interests(
-    session: AsyncSession, uuid4: Annotated[uuid.UUID, ...]
+    session: AsyncSession, uuid4: Annotated[uuid.UUID, ...], lang: Languages = None
 ) -> ResearchInterests | None:
+    research_interests_fields = [ResearchInterests]
+    if lang is not None:
+        research_interests_fields = [
+            ResearchInterests.uuid.label("uuid"),
+            ResearchInterests.translations[lang]["title"].label("title"),
+            ResearchInterests.teachers_viewonly,
+        ]
     stmt = (
         select(ResearchInterests)
         .where(ResearchInterests.uuid == uuid4)
@@ -188,6 +222,7 @@ async def update_research_interests(
     session: AsyncSession,
     data: UpdateResearchInterests,
 ) -> ResearchInterests:
+
     stmt = (
         update(ResearchInterests)
         .where(ResearchInterests.uuid == uuid4)

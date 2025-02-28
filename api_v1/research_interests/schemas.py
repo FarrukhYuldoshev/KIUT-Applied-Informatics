@@ -1,10 +1,10 @@
 from typing import Annotated, Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 import uuid as UUID
-from api_v1.teachers.schemas import GetTeachersWithResearchInterests
 import enum
 from fastapi import Form, Query
 from core.models.enumrators import Languages
+
 
 class OrderingResearchInterests(enum.Enum):
     by_title = "title"
@@ -14,6 +14,7 @@ class OrderingResearchInterests(enum.Enum):
 
 class OnlyUUID(BaseModel):
     uuid: UUID.UUID = Field(...)
+    translations: dict[str, dict[str, str]]
 
 
 class ResearchInterestsOnlyUUID(BaseModel):
@@ -35,34 +36,43 @@ class CreateResearchInterests:
         self.title = title
         self.lang = lang
 
-class TeacherWithResearchInterest(BaseModel):
-    research_interests_viewonly: List[]
+
+# class TeacherWithResearchInterest(BaseModel):
+#     research_interests_viewonly: List[]
+
 
 class GetResearchInterestsWithTeacher(BaseModel):
-    uuid: UUID.UUID
-    teachers_viewonly: Annotated[List[OnlyUUID], Field(serialization_alias="teachers")]
+    uuid: Annotated[UUID.UUID, Field(serialization_alias="teacher_id")]
+    research_interest_viewonly: Annotated[
+        List[OnlyUUID], Field(serialization_alias="research_interests")
+    ]
 
 
-class GetResearchInterests(BaseModel):
+class GetResearchInterestsSelectedLanguage(BaseModel):
     title: Optional[str] = None
     uuid: UUID.UUID
-    in_teacher_count: Optional[int] = None
+    using_count: Optional[int] = None
 
 
-class GetResearchInterestsWithoutTeacher(BaseModel):
-    title: Optional[str]
-    uuid: UUID.UUID
+class GetResearchInterests(GetResearchInterestsSelectedLanguage):
+    translations: dict[Languages, dict[str, str]] | None = None
 
 
 class UpdateResearchInterests(BaseModel):
+    translations: (
+        Annotated[
+            dict[Languages, str],
+            Field(
+                default=None,
+                example={lang.value: {"title": "text"} for lang in Languages},
+                description=f"Allowed keys for language: {[lang.value for lang in Languages]}",
+            ),
+        ]
+        | None
+    ) = None
+    teachers: List[UUID.UUID] | None = None
     pass
 
 
 class DeleteResearchInterests(BaseModel):
     uuid: UUID.UUID
-
-
-class CreatePublications(BaseModel):
-    title: str
-    link: Optional[str] = None
-    teacher_id: str
