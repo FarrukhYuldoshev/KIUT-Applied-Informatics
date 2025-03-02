@@ -6,15 +6,38 @@ from fastapi import Form, Query
 from core.models.enumrators import Languages
 
 
+class OnlyUUID(BaseModel):
+    uuid: UUID.UUID
+
+
 class OrderingResearchInterests(enum.Enum):
     by_title = "title"
     by_most_used = "most_used"
     by_most_used_and_title = "most_used_and_title"
 
 
-class OnlyUUID(BaseModel):
-    uuid: UUID.UUID = Field(...)
-    translations: dict[str, dict[str, str]]
+class GetResearchInterests(BaseModel):
+    title: Optional[str] = None
+    uuid: UUID.UUID
+    using_count: int = 0
+    translations: (
+        Annotated[
+            dict[Languages, dict[str, str]],
+            Field(
+                default=None,
+                example={lang.value: {"title": "text"} for lang in Languages},
+                description=f"Allowed keys for language: {[lang.value for lang in Languages]}",
+            ),
+        ]
+        | None
+    ) = None
+    teachers_ids: Annotated[
+        List[OnlyUUID],
+        Field(
+            default=None,
+            serialization_alias="teachers",
+        ),
+    ]
 
 
 class ResearchInterestsOnlyUUID(BaseModel):
@@ -26,7 +49,7 @@ class CreateResearchInterests:
         self,
         lang: Annotated[Languages, Query(..., alias="lang")],
         title: Annotated[
-            List[str],
+            List[Annotated[str, Field(min_length=10)]],
             Form(
                 max_length=256,
                 description="minimum 10 characters",
@@ -41,21 +64,11 @@ class CreateResearchInterests:
 #     research_interests_viewonly: List[]
 
 
-class GetResearchInterestsWithTeacher(BaseModel):
+class GetTeacherWithResearchInterests(BaseModel):
     uuid: Annotated[UUID.UUID, Field(serialization_alias="teacher_id")]
     research_interest_viewonly: Annotated[
-        List[OnlyUUID], Field(serialization_alias="research_interests")
+        List[GetResearchInterests], Field(serialization_alias="research_interests")
     ]
-
-
-class GetResearchInterestsSelectedLanguage(BaseModel):
-    title: Optional[str] = None
-    uuid: UUID.UUID
-    using_count: Optional[int] = None
-
-
-class GetResearchInterests(GetResearchInterestsSelectedLanguage):
-    translations: dict[Languages, dict[str, str]] | None = None
 
 
 class UpdateResearchInterests(BaseModel):

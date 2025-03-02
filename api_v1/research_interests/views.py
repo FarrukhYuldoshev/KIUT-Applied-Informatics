@@ -16,7 +16,7 @@ from .schemas import (
     CreateResearchInterests,
     UpdateResearchInterests,
     DeleteResearchInterests,
-    GetResearchInterestsWithTeacher,
+    GetTeacherWithResearchInterests,
     OrderingResearchInterests,
     ResearchInterestsOnlyUUID,
 )
@@ -44,7 +44,9 @@ async def create_research_interests(
 
 
 @router.post(
-    "/research-interests/{teacher_id}", response_model=GetResearchInterestsWithTeacher
+    "/research-interests/{teacher_id}",
+    response_model=GetTeacherWithResearchInterests,
+    response_model_exclude_unset=True,
 )
 async def set_research_interests_to_teacher(
     data: ResearchInterestsOnlyUUID,
@@ -79,12 +81,17 @@ async def get_all_research_interests(
 
 
 @router.get(
-    "/research-interests/{uuid4}", response_model=GetResearchInterestsWithTeacher
+    "/research-interests/{uuid4}",
+    response_model=GetResearchInterests,
 )
 async def get_research_interests(
-    uuid4: uuid.UUID, session: AsyncSession = Depends(db_sessions.session_dependency)
+    uuid4: uuid.UUID,
+    lang: Annotated[Languages, Query(description="only 3 parametres have")] = None,
+    session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
-    result = await crud.get_one_research_interests(uuid4=uuid4, session=session)
+    result = await crud.get_one_research_interests(
+        uuid4=uuid4, session=session, lang=lang
+    )
     return result
 
 
@@ -99,17 +106,6 @@ async def update_research_interests_partial(
         uuid4=uuid4, session=session, data=data
     )
     return result
-
-
-@router.delete("/research-interests/{uuid4}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_research_interest(
-    uuid4: Annotated[
-        uuid.UUID, PathParameter(..., description="UUID of research interest")
-    ],
-    session: AsyncSession = Depends(db_sessions.session_dependency),
-    user=Depends(get_active_user),
-):
-    await crud.delete_research_interest(uuid4=uuid4, session=session)
 
 
 @router.delete("/research-interests/", status_code=status.HTTP_204_NO_CONTENT)
