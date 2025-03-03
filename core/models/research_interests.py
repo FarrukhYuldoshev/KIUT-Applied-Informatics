@@ -22,7 +22,8 @@ class ResearchInterests(Base):
         server_default=text("uuid_generate_v4()"),
     )
     teachers: Mapped[list["ResearchInterestsTeacher"]] = relationship(
-        back_populates="research_interest"
+        back_populates="research_interest",
+        cascade="all, delete-orphan",
     )
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
         JSONB, default={}

@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 
-from api_v1.research_interests.schemas import GetResearchInterests
 from core.models.enumrators import Languages
 from core.settings import db_sessions
 from core.models import (
@@ -21,8 +20,8 @@ from .schemas import (
     GetResearchInterests,
     UpdateResearchInterests,
     OnlyUUID,
-    DeleteResearchInterests,
     OrderingResearchInterests,
+    GetResearchInterestsWithTeacherDetails,
 )
 
 
@@ -214,7 +213,7 @@ async def get_one_research_interests(
     else:
         research: ResearchInterests = result.__getattr__(ResearchInterests)
         using_count = result.__getattr__("using_count")
-        data = GetResearchInterests(uuid=research.uuid)
+        data = GetResearchInterestsWithTeacherDetails(uuid=research.uuid)
         if lang is not None:
             if research.translations.get(lang) is not None:
                 data.title = research.translations[lang].get("title")
@@ -222,7 +221,7 @@ async def get_one_research_interests(
             data.translations = research.translations
         if using_count is not None:
             data.using_count = using_count
-            data.teachers_ids = [
+            data.teachers_viewonly = [
                 OnlyUUID(uuid=value.uuid) for value in research.teachers_viewonly
             ]
         return data
@@ -233,16 +232,39 @@ async def update_research_interests(
     session: AsyncSession,
     data: UpdateResearchInterests,
 ) -> ResearchInterests:
-
     stmt = (
-        update(ResearchInterests)
+        select(ResearchInterests)
+        .options(
+            selectinload(ResearchInterests.teachers),
+            selectinload(ResearchInterests.teachers_viewonly),
+        )
         .where(ResearchInterests.uuid == uuid4)
-        .values(title=data.title)
-        .returning(ResearchInterests)
     )
-    result = await session.scalars(stmt)
-    await session.commit()
-    return result.one()
+    research = await session.scalar(stmt)
+    if research is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Research interest not found"
+        )
+    else:
+        if data.teachers is not None:
+            await session.execute(
+                delete(ResearchInterestsTeacher).where(
+                    ResearchInterestsTeacher.research_interests_id == research.uuid
+                )
+            )
+            research_interests_teachers = [
+                ResearchInterestsTeacher(
+                    teacher_id=value,
+                    research_interests_id=research.uuid,
+                )
+                for value in data.teachers
+            ]
+            research.teachers = research_interests_teachers
+        if data.translations is not None:
+            research.translations = data.translations
+        await session.commit()
+        await session.refresh(research)
+        return research
 
 
 async def delete_research_interests_from_selected_teacher(
@@ -251,11 +273,11 @@ async def delete_research_interests_from_selected_teacher(
     research_interests: set,
 ) -> None:
 
-    teacher_uuid = await get_teacher_or_none(session=session, teacher_id=teacher_id)
+    teacher = await get_teacher_or_none(session=session, teacher_id=teacher_id)
     stmt = select(ResearchInterestsTeacher.research_interests_id).where(
         and_(
             ResearchInterestsTeacher.research_interests_id.in_(research_interests),
-            ResearchInterestsTeacher.teacher_id == teacher_uuid,
+            ResearchInterestsTeacher.teacher_id == teacher.uuid,
         )
     )
     existing_uuids = set(await session.scalars(stmt))
@@ -270,7 +292,7 @@ async def delete_research_interests_from_selected_teacher(
 
 
 async def get_list_of_research_interests(
-    data: list[DeleteResearchInterests],
+    data: list[OnlyUUID],
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ) -> set:
     values = set(item.uuid for item in data)

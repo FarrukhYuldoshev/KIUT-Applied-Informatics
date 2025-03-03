@@ -31,13 +31,16 @@ class GetResearchInterests(BaseModel):
         ]
         | None
     ) = None
-    teachers_ids: Annotated[
+
+
+class GetResearchInterestsWithTeacherDetails(GetResearchInterests):
+    teachers_viewonly: Annotated[
         List[OnlyUUID],
         Field(
-            default=None,
+            default=...,
             serialization_alias="teachers",
         ),
-    ]
+    ] = None
 
 
 class ResearchInterestsOnlyUUID(BaseModel):
@@ -60,10 +63,6 @@ class CreateResearchInterests:
         self.lang = lang
 
 
-# class TeacherWithResearchInterest(BaseModel):
-#     research_interests_viewonly: List[]
-
-
 class GetTeacherWithResearchInterests(BaseModel):
     uuid: Annotated[UUID.UUID, Field(serialization_alias="teacher_id")]
     research_interest_viewonly: Annotated[
@@ -74,7 +73,7 @@ class GetTeacherWithResearchInterests(BaseModel):
 class UpdateResearchInterests(BaseModel):
     translations: (
         Annotated[
-            dict[Languages, str],
+            dict[Languages, dict[str, Annotated[str, Field(min_length=10)]]],
             Field(
                 default=None,
                 example={lang.value: {"title": "text"} for lang in Languages},
@@ -85,7 +84,3 @@ class UpdateResearchInterests(BaseModel):
     ) = None
     teachers: List[UUID.UUID] | None = None
     pass
-
-
-class DeleteResearchInterests(BaseModel):
-    uuid: UUID.UUID

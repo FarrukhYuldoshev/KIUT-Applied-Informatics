@@ -1,6 +1,5 @@
-from pathlib import Path
 from typing import Annotated, Optional, List
-from fastapi import Path as PathParameter, Form
+from fastapi import Path, Form
 from fastapi import (
     APIRouter,
     Depends,
@@ -15,7 +14,7 @@ from .schemas import (
     GetResearchInterests,
     CreateResearchInterests,
     UpdateResearchInterests,
-    DeleteResearchInterests,
+    GetResearchInterestsWithTeacherDetails,
     GetTeacherWithResearchInterests,
     OrderingResearchInterests,
     ResearchInterestsOnlyUUID,
@@ -82,7 +81,7 @@ async def get_all_research_interests(
 
 @router.get(
     "/research-interests/{uuid4}",
-    response_model=GetResearchInterests,
+    response_model=GetResearchInterestsWithTeacherDetails,
 )
 async def get_research_interests(
     uuid4: uuid.UUID,
@@ -95,9 +94,9 @@ async def get_research_interests(
     return result
 
 
-@router.patch("/research-interests/", response_model=GetResearchInterests)
+@router.patch("/research-interests/{uuid4}", response_model=GetResearchInterests)
 async def update_research_interests_partial(
-    uuid4: Annotated[uuid.UUID, Query(..., description="uuid of research interests")],
+    uuid4: Annotated[uuid.UUID, Path(..., description="uuid of research interests")],
     data: UpdateResearchInterests,
     session: AsyncSession = Depends(db_sessions.session_dependency),
     user=Depends(get_active_user),
