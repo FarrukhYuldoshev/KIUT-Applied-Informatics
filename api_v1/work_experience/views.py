@@ -6,7 +6,6 @@ from .schemas import (
     GetWorkExperience,
     CreateWorkExperience,
     UpdateWorkExperience,
-    GetWorkExperienceWithSelectedLanguage,
     Languages,
 )
 from core.settings import db_sessions
@@ -19,7 +18,8 @@ router = APIRouter(prefix="/teachers", tags=["Teachers API (Work Experiences)"])
 
 @router.get(
     "/work-experience/",
-    response_model=list[GetWorkExperience] | list[GetWorkExperienceWithSelectedLanguage],
+    response_model=list[GetWorkExperience],
+    response_model_exclude_unset=True,
 )
 async def get_work_experiences(
     lang: Annotated[Languages, Query(alias="lang")] = None,
@@ -31,7 +31,8 @@ async def get_work_experiences(
 
 @router.get(
     "/work-experience/{work_experience_id}",
-    response_model=GetWorkExperience | GetWorkExperienceWithSelectedLanguage,
+    response_model=GetWorkExperience,
+    response_model_exclude_unset=True,
 )
 async def get_work_experience(
     work_experience=Depends(crud.get_work_experience),
@@ -39,7 +40,7 @@ async def get_work_experience(
     return work_experience
 
 
-@router.post("/work-experience/", response_model=GetWorkExperienceWithSelectedLanguage)
+@router.post("/work-experience/", response_model=GetWorkExperience)
 async def create_work_experience(
     user=Depends(get_active_user),
     input_data: CreateWorkExperience = Depends(CreateWorkExperience),
@@ -50,7 +51,11 @@ async def create_work_experience(
     return data
 
 
-@router.patch("/work-experience/{work_experience_id}", response_model=GetWorkExperience)
+@router.patch(
+    "/work-experience/{work_experience_id}",
+    response_model=GetWorkExperience,
+    response_model_exclude_unset=True,
+)
 async def update_work_experience(
     data: UpdateWorkExperience,
     work_experience=Depends(crud.get_work_experience),

@@ -6,7 +6,6 @@ from .schemas import (
     GetEducation,
     CreateEducation,
     UpdateEducation,
-    GetEducationWithSelectedLanguage,
     Languages,
 )
 from core.settings import db_sessions
@@ -19,7 +18,8 @@ router = APIRouter(prefix="/teachers", tags=["Teachers API (Educations)"])
 
 @router.get(
     "/educations/",
-    response_model=list[GetEducation] | list[GetEducationWithSelectedLanguage],
+    response_model=list[GetEducation],
+    response_model_exclude_unset=True,
 )
 async def get_educations(
     lang: Annotated[Languages, Query(alias="lang")] = None,
@@ -31,7 +31,7 @@ async def get_educations(
 
 @router.get(
     "/educations/{education_id}",
-    response_model=GetEducation | GetEducationWithSelectedLanguage,
+    response_model=GetEducation,
 )
 async def get_educations(
     education=Depends(crud.get_education),
@@ -39,7 +39,7 @@ async def get_educations(
     return education
 
 
-@router.post("/educations/", response_model=GetEducationWithSelectedLanguage)
+@router.post("/educations/", response_model=GetEducation)
 async def create_education(
     user=Depends(get_active_user),
     data: CreateEducation = Depends(CreateEducation),

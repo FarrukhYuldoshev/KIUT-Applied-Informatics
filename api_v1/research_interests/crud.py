@@ -217,6 +217,8 @@ async def get_one_research_interests(
         if lang is not None:
             if research.translations.get(lang) is not None:
                 data.title = research.translations[lang].get("title")
+            else:
+                data.title = None
         else:
             data.translations = research.translations
         if using_count is not None:
@@ -262,8 +264,12 @@ async def update_research_interests(
             research.teachers = research_interests_teachers
         if data.translations is not None:
             research.translations = data.translations
-        await session.commit()
-        await session.refresh(research)
+        try:
+            print(research.teachers_viewonly)
+            await session.commit()
+            await session.refresh(research)
+        except IntegrityError:
+            raise HTTPException(status_code=400, detail="Bad request")
         return research
 
 

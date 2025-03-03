@@ -1,17 +1,12 @@
 from fastapi import Form, Query
-from fastapi.params import Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from datetime import date
-from typing import Optional, List, Annotated, Literal
+from typing import Annotated
 from uuid import UUID
-from core.models.enumrators import Roles, Degrees, Languages
-from enum import Enum
 
+from pydantic.v1 import root_validator
 
-class GetTeacher(BaseModel):
-    uuid: UUID
-    full_name: Optional[str] = None
-    role: Optional[Roles] = None
+from core.models.enumrators import Degrees, Languages
 
 
 class EducationDetails(BaseModel):
@@ -43,27 +38,21 @@ class CreateEducation:
         self.teacher_id = teacher_id
 
 
-class GetEducationWithSelectedLanguage(EducationDetails):
+class GetEducation(EducationDetails):
     uuid: UUID
     from_date: Annotated[date, Field(description="Starting date of education")]
     to_date: Annotated[date, Field(description="Ending date of education")]
-    teacher_id: UUID
+    translations: Annotated[dict[Languages, EducationDetails], Field()] = None
+    teacher_id: UUID | None = None
 
-
-class GetEducation(BaseModel):
-    uuid: UUID
-    from_date: Annotated[date, Field(description="Starting date of education")]
-    to_date: Annotated[date, Field(description="Ending date of education")]
-    translations: Annotated[dict[Languages, EducationDetails], Field(...)]
-    teacher_id: UUID
-
-
-class GetEducationWithoutTeacher(BaseModel):
-    uuid: UUID
-    place: Annotated[str, Field(max_length=1024)]
-    degree: Annotated[Degrees, Field(description="Degree of study")]
-    from_date: Annotated[date, Field(description="Starting date of education")]
-    to_date: Annotated[date, Field(description="Ending date of education")]
+    @model_validator(mode="after")
+    def check_passwords_match(self) -> "GetEducation":
+        if self.translations is not None:
+            del self.place
+            del self.degree
+        else:
+            del self.translations
+        return self
 
 
 class UpdateEducation(BaseModel):

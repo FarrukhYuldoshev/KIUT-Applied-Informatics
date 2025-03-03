@@ -82,6 +82,7 @@ async def get_all_research_interests(
 @router.get(
     "/research-interests/{uuid4}",
     response_model=GetResearchInterestsWithTeacherDetails,
+    response_model_exclude_unset=True,
 )
 async def get_research_interests(
     uuid4: uuid.UUID,
@@ -94,7 +95,11 @@ async def get_research_interests(
     return result
 
 
-@router.patch("/research-interests/{uuid4}", response_model=GetResearchInterests)
+@router.patch(
+    "/research-interests/{uuid4}",
+    response_model=GetResearchInterestsWithTeacherDetails,
+    response_model_exclude_unset=True,
+)
 async def update_research_interests_partial(
     uuid4: Annotated[uuid.UUID, Path(..., description="uuid of research interests")],
     data: UpdateResearchInterests,

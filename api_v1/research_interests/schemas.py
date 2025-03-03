@@ -1,5 +1,5 @@
 from typing import Annotated, Optional, List
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 import uuid as UUID
 import enum
 from fastapi import Form, Query
@@ -10,14 +10,17 @@ class OnlyUUID(BaseModel):
     uuid: UUID.UUID
 
 
+class ResearchInterestsDetails(BaseModel):
+    title: str | None = None
+
+
 class OrderingResearchInterests(enum.Enum):
     by_title = "title"
     by_most_used = "most_used"
     by_most_used_and_title = "most_used_and_title"
 
 
-class GetResearchInterests(BaseModel):
-    title: Optional[str] = None
+class GetResearchInterests(ResearchInterestsDetails):
     uuid: UUID.UUID
     using_count: int = 0
     translations: (
@@ -32,6 +35,14 @@ class GetResearchInterests(BaseModel):
         | None
     ) = None
 
+    @model_validator(mode="after")
+    def check_passwords_match(self) -> "GetEducation":
+        if self.translations is not None:
+            del self.title
+        else:
+            del self.translations
+        return self
+
 
 class GetResearchInterestsWithTeacherDetails(GetResearchInterests):
     teachers_viewonly: Annotated[
@@ -41,6 +52,10 @@ class GetResearchInterestsWithTeacherDetails(GetResearchInterests):
             serialization_alias="teachers",
         ),
     ] = None
+
+    @model_validator(mode="after")
+    def check_passwords_match(self) -> "GetResearchInterestsWithTeacherDetails":
+        return self
 
 
 class ResearchInterestsOnlyUUID(BaseModel):
@@ -73,7 +88,7 @@ class GetTeacherWithResearchInterests(BaseModel):
 class UpdateResearchInterests(BaseModel):
     translations: (
         Annotated[
-            dict[Languages, dict[str, Annotated[str, Field(min_length=10)]]],
+            dict[Languages, dict[str, str]],
             Field(
                 default=None,
                 example={lang.value: {"title": "text"} for lang in Languages},
@@ -83,4 +98,3 @@ class UpdateResearchInterests(BaseModel):
         | None
     ) = None
     teachers: List[UUID.UUID] | None = None
-    pass

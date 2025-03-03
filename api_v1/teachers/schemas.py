@@ -5,18 +5,14 @@ from fastapi import Form, File, UploadFile
 from core.models.enumrators import Roles
 from pydantic import BaseModel, Field, EmailStr
 from uuid import UUID as UUID4
-from api_v1.educations.schemas import GetEducationWithoutTeacher
+from api_v1.educations.schemas import GetEducation
 from api_v1.publications.schemas import GetPublicationWithoutTeacher
 from api_v1.work_experience.schemas import GetWorkExperience
+from api_v1.research_interests.schemas import GetResearchInterests
 
 
 class OnlyUUID(BaseModel):
     uuid: UUID4 = Field(...)
-
-
-class ResearchInterest(BaseModel):
-    id: Annotated[UUID4, Field(alias="uuid")]
-    title: str
 
 
 class CreateTeacher:
@@ -48,7 +44,7 @@ class GetTeachers(BaseModel):
 
 class GetTeachersWithResearchInterests(GetTeachers):
     research_interest_viewonly: Annotated[
-        List[ResearchInterest],
+        List[GetResearchInterests],
         Field(serialization_alias="research_interests"),
     ]
     publications_viewonly: Annotated[
@@ -58,9 +54,7 @@ class GetTeachersWithResearchInterests(GetTeachers):
         List["GetWorkExperience"],
         Field(serialization_alias="work_experiences"),
     ]
-    educations: Annotated[
-        List["GetEducationWithoutTeacher"], Field(serialization_alias="educations")
-    ]
+    educations: Annotated[List["GetEducation"], Field(serialization_alias="educations")]
 
 
 class UpdateTeacher:
