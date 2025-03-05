@@ -1,10 +1,8 @@
 from fastapi import Form, Query
 from pydantic import BaseModel, Field, model_validator
 from datetime import date
-from typing import Annotated
+from typing import Annotated, ClassVar
 from uuid import UUID
-
-from pydantic.v1 import root_validator
 
 from core.models.enumrators import Degrees, Languages
 
@@ -38,11 +36,13 @@ class CreateEducation:
         self.teacher_id = teacher_id
 
 
-class GetEducation(EducationDetails):
+class GetEducation(BaseModel):
     uuid: UUID
+    place: str | None = None
+    degree: Degrees | None = None
     from_date: Annotated[date, Field(description="Starting date of education")]
     to_date: Annotated[date, Field(description="Ending date of education")]
-    translations: Annotated[dict[Languages, EducationDetails], Field()] = None
+    translations: Annotated[dict[Languages, dict[str, str]], Field()] = None
     teacher_id: UUID | None = None
 
     @model_validator(mode="after")
@@ -58,7 +58,7 @@ class GetEducation(EducationDetails):
 class UpdateEducation(BaseModel):
     translations: (
         Annotated[
-            dict[Languages, EducationDetails],
+            dict[Languages, dict[str, Degrees]],
             Field(
                 default=None,
                 example={

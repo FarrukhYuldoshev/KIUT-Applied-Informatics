@@ -11,13 +11,9 @@ class OnlyUUID(BaseModel):
 
 class GetTeachers(BaseModel):
     teacher_id: Annotated[
-        UUID4, Field(default=..., alias="uuid", serialization_alias="uuid")
+        UUID4, Field(default=..., alias="uuid", serialization_alias="teacher_id")
     ]
-    full_name: Annotated[str, Field(..., min_length=5, max_length=256)]
     email: Annotated[EmailStr, Field(...)]
-    role: Annotated[Roles, Field(...)]
-    scopus_link: Annotated[Optional[str], Field(None)]
-    image: Annotated[str, Field(..., description="Teacher's image")]
 
 
 class CreatePublication:

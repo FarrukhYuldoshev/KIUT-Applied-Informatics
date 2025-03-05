@@ -1,10 +1,10 @@
-from .roles import Roles, RolesRate
+from .roles import Roles, RolesForSelect
 from .degrees import DegreesEn, DegreesRu, DegreesUz, Degrees
 from .languages import Languages
 
 __all__ = (
     "Roles",
-    "RolesRate",
+    "RolesForSelect",
     "DegreesEn",
     "DegreesRu",
     "DegreesUz",

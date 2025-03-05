@@ -1,10 +1,18 @@
 import uuid
 from pathlib import Path as Pathlib
-from typing import Annotated
-
 import aiofiles
 import starlette
-from sqlalchemy import select, insert, ScalarResult, update, delete, case
+from sqlalchemy import (
+    select,
+    insert,
+    ScalarResult,
+    update,
+    delete,
+    case,
+    String,
+    cast,
+    text,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
@@ -12,9 +20,10 @@ from sqlalchemy.orm import selectinload, joinedload
 from core.models import Teachers, ResearchInterestsTeacher
 from fastapi import HTTPException, UploadFile, Path
 from starlette import status
-from core.models.enumrators import Roles, RolesRate
-from .schemas import CreateTeacher, UpdateTeacher
+from core.models.enumrators import Roles, Languages
+from .schemas import CreateTeacher, UpdateTeacher, GetTeachersWithResearchInterests
 from pydantic import EmailStr, ValidationError
+from api_v1.educations.crud import get_educations_of_teacher
 
 UPLOAD_DIR = Pathlib("static/files")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -58,15 +67,68 @@ async def get_teacher_or_none(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
     else:
+        # teacher_data = {
+        #     "uuid": result.uuid,
+        #     "full_name": result.translations[lang]["full_name"],
+        #     "role": result.translations[lang]["role"],
+        #     "email": result.email,
+        #     "image": result.image,
+        #     "educations": [
+        #         {
+        #             "uuid": edu.uuid,
+        #             "from_date": edu.from_date,
+        #             "to_date": edu.to_date,
+        #             "place": edu.translations.get(lang, {}).get("place"),
+        #             "degree": edu.translations.get(lang, {}).get("degree"),
+        #             "teacher_id": edu.teacher_id,
+        #         }
+        #         for edu in result.educations
+        #     ],
+        #     "publications_viewonly": [
+        #         {
+        #             "uuid": publication.uuid,
+        #             "title": publication.title,
+        #             "link": publication.link,
+        #             "pre_print_link": publication.pre_print_link,
+        #         }
+        #         for publication in result.publications_viewonly
+        #     ],
+        #     "research_interest_viewonly": [],
+        #     "work_experiences": [],
+        # }
         return result
 
 
 async def create_teacher(session: AsyncSession, data: CreateTeacher) -> Teachers:
     file = await create_file(data.image)
     data.image = file
+    role: Roles = Roles.get_position_by_key(data.role.name)
+    translations: dict[Languages, dict[str, str]] = {
+        Languages.uz: {
+            "full_name": data.full_name_uz,
+            "role": role.get_name(Languages.uz.value),
+            "biography": data.biography_uz,
+        },
+        Languages.ru: {
+            "full_name": data.full_name_ru,
+            "role": role.get_name(Languages.ru.value),
+            "biography": data.biography_ru,
+        },
+        Languages.en: {
+            "full_name": data.full_name_en,
+            "role": role.get_name(Languages.en.value),
+            "biography": data.biography_en,
+        },
+    }
+    data_in: dict = {
+        "translations": translations,
+        "scopus_link": data.scopus_link,
+        "email": data.email,
+        "image": data.image,
+    }
     try:
         teacher: Teachers = await session.scalar(
-            insert(Teachers).values(data.__dict__).returning(Teachers)
+            insert(Teachers).values(data_in).returning(Teachers)
         )
         await session.commit()
     except IntegrityError as e:
@@ -124,28 +186,36 @@ async def delete_teacher(teacher: Teachers, session: AsyncSession):
 async def get_all_teachers(session: AsyncSession) -> ScalarResult[Teachers]:
     role_level_order = case(
         (
-            Teachers.role == Roles.head_of_the_department,
-            RolesRate.head_of_the_department.value,
+            Teachers.translations["en"]["role"].astext
+            == Roles.HEAD_OF_DEPARTMENT.get_name("en"),
+            Roles.HEAD_OF_DEPARTMENT.level,
         ),
         (
-            Teachers.role == Roles.professor,
-            RolesRate.professor.value,
+            Teachers.translations["en"]["role"].astext
+            == Roles.PROFESSOR.get_name("en"),
+            Roles.PROFESSOR.level,
         ),
         (
-            Teachers.role == Roles.associate_professor,
-            RolesRate.associate_professor.value,
+            Teachers.translations["en"]["role"].astext
+            == Roles.ASSOCIATE_PROFESSOR.get_name("en"),
+            Roles.ASSOCIATE_PROFESSOR.level,
         ),
-        (Teachers.role == Roles.senior_lecturer, RolesRate.senior_lecturer.value),
-        (Teachers.role == Roles.teacher, RolesRate.teacher.value),
-        (Teachers.role == Roles.staff, RolesRate.staff.value),
+        (
+            Teachers.translations["en"]["role"].astext
+            == Roles.SENIOR_LECTURER.get_name("en"),
+            Roles.SENIOR_LECTURER.level,
+        ),
+        (
+            Teachers.translations["en"]["role"].astext == Roles.TEACHER.get_name("en"),
+            Roles.TEACHER.level,
+        ),
+        (
+            Teachers.translations["en"]["role"].astext
+            == Roles.PROGRAMMER.get_name("en"),
+            Roles.PROGRAMMER.level,
+        ),
     )
-    stmt = (
-        select(Teachers)
-        .options(selectinload(Teachers.research_interest_viewonly))
-        .options(selectinload(Teachers.publications_viewonly))
-        .options(selectinload(Teachers.educations))
-        .options(selectinload(Teachers.work_experiences))
-        .order_by(role_level_order)
-    )
+
+    stmt = select(Teachers).order_by(role_level_order.asc())
     result = await session.scalars(stmt)
     return result

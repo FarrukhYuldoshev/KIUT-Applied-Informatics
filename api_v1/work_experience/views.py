@@ -46,7 +46,6 @@ async def create_work_experience(
     input_data: CreateWorkExperience = Depends(CreateWorkExperience),
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
-    print(input_data.lang)
     data = await crud.create_work_experience(data=input_data, session=session)
     return data
 

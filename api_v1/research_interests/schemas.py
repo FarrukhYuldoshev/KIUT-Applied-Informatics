@@ -13,6 +13,9 @@ class OnlyUUID(BaseModel):
 class ResearchInterestsDetails(BaseModel):
     title: str | None = None
 
+    class Config:
+        extra = "forbid"
+
 
 class OrderingResearchInterests(enum.Enum):
     by_title = "title"
@@ -25,7 +28,7 @@ class GetResearchInterests(ResearchInterestsDetails):
     using_count: int = 0
     translations: (
         Annotated[
-            dict[Languages, dict[str, str]],
+            dict[Languages, ResearchInterestsDetails],
             Field(
                 default=None,
                 example={lang.value: {"title": "text"} for lang in Languages},
@@ -36,7 +39,7 @@ class GetResearchInterests(ResearchInterestsDetails):
     ) = None
 
     @model_validator(mode="after")
-    def check_passwords_match(self) -> "GetEducation":
+    def model_validate(self) -> "GetResearchInterests":
         if self.translations is not None:
             del self.title
         else:
@@ -54,7 +57,7 @@ class GetResearchInterestsWithTeacherDetails(GetResearchInterests):
     ] = None
 
     @model_validator(mode="after")
-    def check_passwords_match(self) -> "GetResearchInterestsWithTeacherDetails":
+    def model_validate(self) -> "GetResearchInterestsWithTeacherDetails":
         return self
 
 
@@ -88,7 +91,7 @@ class GetTeacherWithResearchInterests(BaseModel):
 class UpdateResearchInterests(BaseModel):
     translations: (
         Annotated[
-            dict[Languages, dict[str, str]],
+            dict[Languages, ResearchInterestsDetails],
             Field(
                 default=None,
                 example={lang.value: {"title": "text"} for lang in Languages},

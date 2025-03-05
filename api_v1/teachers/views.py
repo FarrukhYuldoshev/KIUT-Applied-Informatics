@@ -1,11 +1,8 @@
 from typing import Annotated
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    Path,
-    HTTPException,
-)
+from fastapi import APIRouter, Depends, Path, HTTPException, Query
+
+from core.models.enumrators import Languages
 from core.settings import db_sessions
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -32,7 +29,7 @@ async def create_teacher(
     return result
 
 
-@router.get("/", response_model=list[GetTeachersWithResearchInterests])
+@router.get("/", response_model=list[GetTeachers], response_model_exclude_unset=True)
 async def get_all_teachers(
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
@@ -40,7 +37,11 @@ async def get_all_teachers(
     return result
 
 
-@router.get("/{teacher_id}", response_model=GetTeachersWithResearchInterests)
+@router.get(
+    "/{teacher_id}",
+    response_model=GetTeachersWithResearchInterests,
+    response_model_exclude_unset=True,
+)
 async def get_teacher(
     teacher_id: Annotated[uuid.UUID, Path(description="Teacher uuid")],
     session: AsyncSession = Depends(db_sessions.session_dependency),

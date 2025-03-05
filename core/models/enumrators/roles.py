@@ -1,26 +1,45 @@
-import enum
+from enum import Enum
 
 
-class Roles(enum.Enum):
-    head_of_the_department = "Head of the department"
-    professor = "Professor"
-    associate_professor = "Associate professor"
-    senior_lecturer = "Senior Lecturer"
-    teacher = "Teacher"
-    staff = "Staff"
+class Roles(Enum):
+    HEAD_OF_DEPARTMENT = (
+        "Head of the department",
+        "Bo‘lim boshlig‘i",
+        "Заведующий отделом",
+        1,
+    )
+    PROFESSOR = ("Professor", "Professor", "Профессор", 2)
+    ASSOCIATE_PROFESSOR = ("Associate professor", "Dotsent", "Доцент", 3)
+    SENIOR_LECTURER = (
+        "Senior Lecturer",
+        "Katta o‘qituvchi",
+        "Старший преподаватель",
+        4,
+    )
+    TEACHER = ("Teacher", "O‘qituvchi", "Преподаватель", 5)
+    PROGRAMMER = (
+        "Student (Software Engineer)",
+        "Talaba (Dasturiy injiniring)",
+        "Студент (Программная инженерия)",
+        6,
+    )
+
+    def __init__(self, en, uz, ru, level):
+        self.translations = {"en": en, "uz": uz, "ru": ru}
+        self.level = level
+
+    def get_name(self, lang):
+        return self.translations.get(lang, self.translations["en"])
+
+    @staticmethod
+    def get_position_by_key(key: str):
+        return Roles.__members__.get(key, None)  # Agar yo‘q bo‘lsa, None qaytaradi
 
 
-class RolesRate(enum.Enum):
-    head_of_the_department = 1
-    professor = 2
-    associate_professor = 3
-    senior_lecturer = 4
-    teacher = 5
-    staff = 6
-
-
-# role_level_order = case( # CASE operatorini yaratish
-#     (User.role_name == RoleLevel.HEAD_OF_DEPARTMENT.role_name, RoleLevel.HEAD_OF_DEPARTMENT.level), # Agar role_name 'Head Of Department' bo'lsa, daraja 1
-#     (User.role_name == RoleLevel.PROFESSOR.role_name, RoleLevel.PROFESSOR.level), # Agar role_name 'Professor' bo'lsa, daraja 2
-#     (User.role_name == RoleLevel.STAFF.role_name, RoleLevel.STAFF.level), # Agar role_name 'Staff' bo'lsa, daraja 3
-#     else_=4  # Boshqa rollar uchun default daraja (agar kerak bo'lsa)
+class RolesForSelect(str, Enum):
+    HEAD_OF_DEPARTMENT = "Head of the department"
+    PROFESSOR = "Professor"
+    ASSOCIATE_PROFESSOR = "Associate professor"
+    SENIOR_LECTURER = "Senior Lecturer"
+    TEACHER = "Teacher"
+    STAFF = "Staff"

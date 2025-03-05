@@ -1,5 +1,5 @@
 from fastapi import Form, Query
-from pydantic import BaseModel, Field, model_validator, validator, field_validator, Json
+from pydantic import BaseModel, Field, model_validator, field_validator
 from datetime import date
 from typing import Annotated
 from uuid import UUID
@@ -7,8 +7,8 @@ from core.models.enumrators import Languages
 
 
 class WorkExperienceDetails(BaseModel):
-    place: str = None
-    role: str = None
+    place: str | None = None
+    role: str | None = None
 
     class Config:
         extra = "forbid"

@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 86879d3fc1f0
+Revision ID: 88d6e15b55bd
 Revises: 
-Create Date: 2025-02-27 18:20:36.391110
+Create Date: 2025-03-04 12:43:06.439613
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "86879d3fc1f0"
+revision: str = "88d6e15b55bd"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -77,23 +77,14 @@ def upgrade() -> None:
             server_default=sa.text("uuid_generate_v4()"),
             nullable=False,
         ),
-        sa.Column("full_name", sa.String(length=256), nullable=False),
         sa.Column("email", sa.String(length=256), nullable=False),
-        sa.Column(
-            "role",
-            sa.Enum(
-                "head_of_the_department",
-                "professor",
-                "associate_professor",
-                "senior_lecturer",
-                "teacher",
-                "staff",
-                name="roles",
-            ),
-            nullable=False,
-        ),
         sa.Column("image", sa.String(length=100), nullable=True),
         sa.Column("scopus_link", sa.String(length=256), nullable=True),
+        sa.Column(
+            "translations",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("uuid"),
         sa.UniqueConstraint("email"),
     )
