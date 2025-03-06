@@ -1,8 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, HTTPException, Query
-
-from core.models.enumrators import Languages
+from fastapi import APIRouter, Depends, Path
 from core.settings import db_sessions
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status

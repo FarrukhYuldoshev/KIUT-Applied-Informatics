@@ -7,6 +7,8 @@ from .education import Education
 from .work_experience import WorkExperience
 from .publications_teachers import PublicationsTeacher
 from .announcements import Announcements
+from .subjects import Subjects
+from .academic_programms import AcademicPrograms
 
 __all__ = (
     "Base",
@@ -18,4 +20,6 @@ __all__ = (
     "Education",
     "PublicationsTeacher",
     "Announcements",
+    "AcademicPrograms",
+    "Subjects",
 )

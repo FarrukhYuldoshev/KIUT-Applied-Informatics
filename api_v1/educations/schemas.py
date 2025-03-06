@@ -58,7 +58,7 @@ class GetEducation(BaseModel):
 class UpdateEducation(BaseModel):
     translations: (
         Annotated[
-            dict[Languages, dict[str, Degrees]],
+            dict[Languages, dict[str, str]],
             Field(
                 default=None,
                 example={
