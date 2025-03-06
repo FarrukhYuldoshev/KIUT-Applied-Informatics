@@ -1,6 +1,6 @@
 from typing import Dict, Annotated
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from core.models.enumrators import Languages
 from uuid import UUID as uuid4
@@ -11,6 +11,35 @@ class Translations:
         "name": "name of subject",
         "description": "description of subject",
     }
+
+
+class OnlyUUID(BaseModel):
+    uuid: uuid4
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GetSubject(BaseModel):
+    uuid: Annotated[uuid4, Field(...)]
+    translations: Annotated[
+        Dict[Languages, Dict[str, str]],
+        Field(
+            ...,
+            example={lang.value: {**Translations._fields} for lang in Languages},
+            description=f"Allowed keys for language{[lang.value for lang in Languages]}",
+        ),
+    ] = None
+    name: Annotated[str, Field(default=None)] = None
+    description: Annotated[str, Field(default=None)] = None
+    credits: Annotated[int, Field(..., gt=0)]
+    semester: Annotated[int, Field(..., gt=0)]
+    academic_program_id: Annotated[uuid4, Field(...)]
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GetSubjectWithAcademicProgram(GetSubject):
+    academic_program: Annotated[OnlyUUID, Field(default=None)] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CreateSubject(BaseModel, Translations):

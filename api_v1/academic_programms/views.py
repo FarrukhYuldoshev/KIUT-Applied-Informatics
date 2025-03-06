@@ -20,7 +20,7 @@ router = APIRouter(prefix="/academic_programs", tags=["Academic Programs"])
 
 
 @router.post(
-    "/academic_programs",
+    "/",
     response_model=GetAcademicPrograms,
     response_model_exclude_unset=True,
     status_code=status.HTTP_201_CREATED,
@@ -34,7 +34,7 @@ async def create_academic_program(
 
 
 @router.get(
-    "/academic_programs",
+    "/",
     response_model=list[GetAcademicProgramsWithSubjects],
     response_model_exclude_unset=True,
 )
@@ -59,7 +59,7 @@ async def get_all_academic_programs(
 
 
 @router.get(
-    "/academic_programs/{uuid}",
+    "/{uuid}",
     response_model=GetAcademicProgramsWithSubjects,
     response_model_exclude_unset=True,
 )
@@ -70,7 +70,7 @@ async def get_academic_program(
     return result
 
 
-@router.delete("/academic_programms")
+@router.delete("/")
 async def delete_academic_programs(
     uuids: Annotated[set[UUID], Body(serialization_alias="academic_programs_uuids")],
     response: Response,
