@@ -44,18 +44,32 @@ async def get_announcements(
             pagination.update(next=None)
             if page > 1:
                 pagination.update(
-                    previous=str(request.url.include_query_params(page=page - 1))
+                    previous=str(
+                        request.url.path
+                        + "?"
+                        + request.url.include_query_params(page=page - 1).query
+                    )
                 )
             else:
                 pagination.update(previous=None)
         else:
             if page > 1:
                 pagination.update(
-                    previous=str(request.url.include_query_params(page=page - 1))
+                    previous=str(
+                        request.url.path
+                        + "?"
+                        + request.url.include_query_params(page=page - 1).query
+                    )
                 )
             else:
                 pagination.update(previous=None)
-            pagination.update(next=str(request.url.include_query_params(page=page + 1)))
+            pagination.update(
+                next=str(
+                    request.url.path
+                    + "?"
+                    + request.url.include_query_params(page=page + 1).query
+                )
+            )
         pagination_params = PaginationParams(
             total=total, count=page_size, pagination=pagination
         )

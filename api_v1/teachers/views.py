@@ -17,7 +17,12 @@ from demo_auth import get_active_user
 router = APIRouter(prefix="/teachers", tags=["Teachers API"])
 
 
-@router.post("/", response_model=GetTeachers, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=GetTeachers,
+    status_code=status.HTTP_201_CREATED,
+    response_model_exclude_unset=True,
+)
 async def create_teacher(
     user=Depends(get_active_user),
     data=Depends(CreateTeacher),
