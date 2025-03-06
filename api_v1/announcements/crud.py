@@ -1,6 +1,6 @@
 from typing import Annotated, Any, Sequence
 from fastapi import HTTPException, Path, Depends, Query
-from sqlalchemy import insert, select, delete, and_, update, Row
+from sqlalchemy import insert, select, delete, and_, update, Row, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from api_v1.teachers.crud import create_file
 from core.models.enumrators import Languages
@@ -20,11 +20,18 @@ UPLOAD_DIR = Pathlib("static/announcements")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+async def count_announcements(session: AsyncSession) -> int:
+    stmt = select(func.count(Announcements.uuid).label("total"))
+    total: int = await session.scalar(stmt)
+    return total
+
+
 async def get_announcement(
     announcement_id: Annotated[UUID, Path(alias="announcement_id")],
     lang: Annotated[Languages, Query(alias="lang")] = None,
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ) -> Sequence[Row] | None:
+
     if lang is None:
         stmt = select(
             Announcements.uuid,
@@ -91,7 +98,8 @@ async def create_announcement(
 
 
 async def get_all_announcements(
-    session: AsyncSession, lang: Languages = None
+    session: AsyncSession,
+    lang: Languages = None,
 ) -> Sequence[Row]:
     if lang is None:
         stmt = select(
@@ -109,7 +117,7 @@ async def get_all_announcements(
             Announcements.translations[lang.value]["description"].label("description"),
             Announcements.created_at,
             Announcements.updated_at,
-        ).where(Announcements.translations[lang.value].isnot(None))
+        )
     result = await session.execute(stmt)
     result = result.all()
     return result

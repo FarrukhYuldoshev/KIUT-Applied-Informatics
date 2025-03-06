@@ -9,10 +9,11 @@ from .publications import router as publications_router
 from .announcements import announcement_router
 from .academic_programms import router as academic_programs_router
 from .subjects import router as subjects_router
+from .index import router as index_router
 
 router = APIRouter(prefix="/api/v1")
 
-
+router.include_router(index_router)
 router.include_router(announcement_router)
 router.include_router(academic_programs_router)
 router.include_router(subjects_router)

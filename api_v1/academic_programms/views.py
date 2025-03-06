@@ -48,7 +48,7 @@ async def get_all_academic_programs(
         for obj in result:
             programs.append(
                 GetAcademicProgramsWithSubjects(
-                    subjects=obj.subjects,
+                    subjects=[{"uuid": value.uuid} for value in obj.subjects],
                     uuid=obj.uuid,
                     year_of_study=obj.year_of_study,
                     **obj.translations[lang.value]
@@ -64,9 +64,18 @@ async def get_all_academic_programs(
     response_model_exclude_unset=True,
 )
 async def get_academic_program(
-    uuid: UUID, session: AsyncSession = Depends(db_sessions.session_dependency)
+    uuid: UUID,
+    session: AsyncSession = Depends(db_sessions.session_dependency),
+    lang: Languages = Query(alias="lang", default=None),
 ):
     result = await crud.get_academic_program(uuid, session=session)
+    if lang is not None:
+        return GetAcademicProgramsWithSubjects(
+            subjects=[{"uuid": value.uuid} for value in result.subjects],
+            uuid=result.uuid,
+            year_of_study=result.year_of_study,
+            **result.translations[lang.value]
+        )
     return result
 
 
