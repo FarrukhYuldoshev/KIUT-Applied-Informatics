@@ -40,11 +40,9 @@ class CreateAcademicProgram(BaseModel, Translations):
             description=f"Allowed keys for language: {[lang.value for lang in Languages]}",
         ),
     ]
-
     year_of_study: Annotated[int, Field(ge=1, description="The year of the study")]
 
     @field_validator("translations")
-    @classmethod
     def validate_translations(
         cls, value: Dict[Languages, Dict[str, str | List[str]]]
     ) -> Dict[Languages, Dict[str, str | List[str]]]:
