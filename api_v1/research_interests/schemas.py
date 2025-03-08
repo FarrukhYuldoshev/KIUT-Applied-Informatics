@@ -1,20 +1,25 @@
-from typing import Annotated, Optional, List
-from pydantic import BaseModel, Field, StringConstraints, model_validator
+from typing import Annotated, Optional, List, Dict
+from pydantic import (
+    BaseModel,
+    Field,
+    StringConstraints,
+    model_validator,
+    field_validator,
+    ConfigDict,
+)
 import uuid as UUID
 import enum
 from fastapi import Form, Query
 from core.models.enumrators import Languages
 
 
+class Translations:
+    _fields: dict[str, str] = {"title": "text"}
+
+
 class OnlyUUID(BaseModel):
     uuid: UUID.UUID
-
-
-class ResearchInterestsDetails(BaseModel):
-    title: str | None = None
-
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderingResearchInterests(enum.Enum):
@@ -23,12 +28,13 @@ class OrderingResearchInterests(enum.Enum):
     by_most_used_and_title = "most_used_and_title"
 
 
-class GetResearchInterests(ResearchInterestsDetails):
+class GetResearchInterests(BaseModel):
     uuid: UUID.UUID
+    title: str | None = None
     using_count: int = 0
     translations: (
         Annotated[
-            dict[Languages, ResearchInterestsDetails],
+            dict[Languages, dict[str, str]],
             Field(
                 default=None,
                 example={lang.value: {"title": "text"} for lang in Languages},
@@ -37,61 +43,40 @@ class GetResearchInterests(ResearchInterestsDetails):
         ]
         | None
     ) = None
-
-    @model_validator(mode="after")
-    def model_validate(self) -> "GetResearchInterests":
-        if self.translations is not None:
-            del self.title
-        else:
-            del self.translations
-        return self
-
-
-class GetResearchInterestsWithTeacherDetails(GetResearchInterests):
-    teachers_viewonly: Annotated[
+    teachers: Annotated[
         List[OnlyUUID],
-        Field(
-            default=...,
-            serialization_alias="teachers",
-        ),
-    ] = None
+        Field(default=None, alias="teachers_viewonly", serialization_alias="teachers"),
+    ]
+    model_config = ConfigDict(from_attributes=True)
 
-    @model_validator(mode="after")
-    def model_validate(self) -> "GetResearchInterestsWithTeacherDetails":
-        return self
+    # @model_validator(mode="after")
+    # def model_validate(self) -> "GetResearchInterests":
+    #     if self.translations is not None:
+    #         del self.title
+    #     else:
+    #         del self.translations
+    #     return self
 
 
 class ResearchInterestsOnlyUUID(BaseModel):
     research_interests: List[UUID.UUID]
 
 
-class CreateResearchInterests:
-    def __init__(
-        self,
-        lang: Annotated[Languages, Query(..., alias="lang")],
-        title: Annotated[
-            List[Annotated[str, Field(min_length=10)]],
-            Form(
-                max_length=256,
-                description="minimum 10 characters",
-            ),
-        ] = ["title"],
-    ):
-        self.title = title
-        self.lang = lang
-
-
 class GetTeacherWithResearchInterests(BaseModel):
-    uuid: Annotated[UUID.UUID, Field(serialization_alias="teacher_id")]
-    research_interest_viewonly: Annotated[
-        List[GetResearchInterests], Field(serialization_alias="research_interests")
+    uuid: Annotated[UUID.UUID, Field(alias="uuid", serialization_alias="teacher_id")]
+    research_interests: Annotated[
+        List[GetResearchInterests],
+        Field(
+            alias="research_interest_viewonly",
+            serialization_alias="research_interests",
+        ),
     ]
 
 
-class UpdateResearchInterests(BaseModel):
+class UpdateResearchInterests(BaseModel, Translations):
     translations: (
         Annotated[
-            dict[Languages, ResearchInterestsDetails],
+            dict[Languages, dict[str, str]],
             Field(
                 default=None,
                 example={lang.value: {"title": "text"} for lang in Languages},
@@ -101,3 +86,51 @@ class UpdateResearchInterests(BaseModel):
         | None
     ) = None
     teachers: List[UUID.UUID] | None = None
+
+    @field_validator("translations")
+    def validate_translations(
+        cls, value: Dict[Languages, Dict[str, str]]
+    ) -> Dict[Languages, Dict[str, str]]:
+        languages = set(lang.value for lang in Languages)
+        for lang, data in value.items():
+            if not isinstance(lang, Languages):
+                raise ValueError(f"Unsupported language expected: {languages}")
+            expected_keys = set(Translations._fields.keys())
+            data_keys = set(data.keys())
+            if extra_keys := data_keys - expected_keys:
+                raise ValueError(f"Unexpected keys in translations: {extra_keys}")
+            if missing_keys := expected_keys - data_keys:
+                raise ValueError(f"Missing keys in translations: {missing_keys}")
+        return value
+
+
+class CreateResearchInterests(UpdateResearchInterests):
+    translations: Annotated[
+        dict[Languages, dict[str, str]],
+        Field(
+            default=...,
+            example={lang.value: {"title": "text"} for lang in Languages},
+            description=f"Allowed keys for language: {[lang.value for lang in Languages]}",
+        ),
+    ]
+
+    @field_validator("translations")
+    def validate_translations(
+        cls, value: Dict[Languages, Dict[str, str]]
+    ) -> Dict[Languages, Dict[str, str]]:
+        languages = set(lang.value for lang in Languages)
+        for lang, data in value.items():
+            if not isinstance(lang, Languages):
+                raise ValueError(f"Unsupported language expected: {languages}")
+            languages.remove(lang.value)
+            expected_keys = set(Translations._fields.keys())
+            data_keys = set(data.keys())
+            if extra_keys := data_keys - expected_keys:
+                raise ValueError(f"Unexpected keys in translations: {extra_keys}")
+            if missing_keys := expected_keys - data_keys:
+                raise ValueError(f"Missing keys in translations: {missing_keys}")
+        if len(languages) > 0:
+            raise ValueError(
+                f"Languages not found or duplicate missing {languages} languages"
+            )
+        return value

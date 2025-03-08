@@ -14,7 +14,6 @@ from .schemas import (
     GetResearchInterests,
     CreateResearchInterests,
     UpdateResearchInterests,
-    GetResearchInterestsWithTeacherDetails,
     GetTeacherWithResearchInterests,
     OrderingResearchInterests,
     ResearchInterestsOnlyUUID,
@@ -28,16 +27,15 @@ router = APIRouter(prefix="/teachers", tags=["Teachers API (research interests)"
 
 @router.post(
     "/research-interests/",
-    response_model=list[GetResearchInterests],
+    response_model=GetResearchInterests,
     status_code=status.HTTP_201_CREATED,
     response_model_exclude_unset=True,
 )
 async def create_research_interests(
     session: Annotated[AsyncSession, Depends(db_sessions.session_dependency)],
-    data: CreateResearchInterests = Depends(CreateResearchInterests),
+    data: CreateResearchInterests,
     user=Depends(get_active_user),
 ):
-
     result = await crud.create_research_interests(session, data=data)
     return result
 
@@ -66,22 +64,21 @@ async def set_research_interests_to_teacher(
     description="Get All Research Interests",
 )
 async def get_all_research_interests(
+    lang: Languages,
     order_by: Annotated[
         OrderingResearchInterests, Query(description="only 3 parametres have")
     ] = None,
-    lang: Languages = None,
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
     result = await crud.get_all_research_interests(
         session, order_by=order_by, lang=lang
     )
-    print(result)
     return result
 
 
 @router.get(
     "/research-interests/{uuid4}",
-    response_model=GetResearchInterestsWithTeacherDetails,
+    response_model=GetResearchInterests,
     response_model_exclude_unset=True,
 )
 async def get_research_interests(
@@ -97,7 +94,7 @@ async def get_research_interests(
 
 @router.patch(
     "/research-interests/{uuid4}",
-    response_model=GetResearchInterestsWithTeacherDetails,
+    response_model=GetResearchInterests,
     response_model_exclude_unset=True,
 )
 async def update_research_interests_partial(

@@ -67,35 +67,6 @@ async def get_teacher_or_none(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
     else:
-        # teacher_data = {
-        #     "uuid": result.uuid,
-        #     "full_name": result.translations[lang]["full_name"],
-        #     "role": result.translations[lang]["role"],
-        #     "email": result.email,
-        #     "image": result.image,
-        #     "educations": [
-        #         {
-        #             "uuid": edu.uuid,
-        #             "from_date": edu.from_date,
-        #             "to_date": edu.to_date,
-        #             "place": edu.translations.get(lang, {}).get("place"),
-        #             "degree": edu.translations.get(lang, {}).get("degree"),
-        #             "teacher_id": edu.teacher_id,
-        #         }
-        #         for edu in result.educations
-        #     ],
-        #     "publications_viewonly": [
-        #         {
-        #             "uuid": publication.uuid,
-        #             "title": publication.title,
-        #             "link": publication.link,
-        #             "pre_print_link": publication.pre_print_link,
-        #         }
-        #         for publication in result.publications_viewonly
-        #     ],
-        #     "research_interest_viewonly": [],
-        #     "work_experiences": [],
-        # }
         return result
 
 
