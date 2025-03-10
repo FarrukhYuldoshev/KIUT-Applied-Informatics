@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import UUID, text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from . import Base
 from uuid import uuid4
@@ -26,7 +27,7 @@ class ResearchInterests(Base):
         cascade="all, delete-orphan",
     )
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
-        JSONB, default={}
+        MutableDict.as_mutable(JSONB), default={}
     )
     teachers_viewonly: Mapped[list["Teachers"]] = relationship(
         back_populates="research_interest_viewonly",

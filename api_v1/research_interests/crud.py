@@ -206,6 +206,8 @@ async def get_one_research_interests(
             data.translations = research.translations
         if using_count is not None:
             data.using_count = using_count
+        else:
+            data.using_count = 0
         return data
 
 
@@ -246,11 +248,14 @@ async def update_research_interests(
             research.translations.update(**data.translations)
         try:
             await session.commit()
-        except IntegrityError:
+        except IntegrityError as e:
+            if "UniqueViolationError" in str(e.orig):
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Research Interest conflict title:  {e}",
+                )
             raise HTTPException(status_code=400, detail="Bad request")
-        research = await get_one_research_interests(
-            session=session, uuid4=research.uuid
-        )
+        await session.refresh(research)
         return research
 
 

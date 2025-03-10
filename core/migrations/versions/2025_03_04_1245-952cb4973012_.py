@@ -31,18 +31,21 @@ def upgrade():
               SELECT 1 FROM research_interests
               WHERE translations ? 'uz'
                 AND translations->'uz'->>'title' = NEW.translations->'uz'->>'title'
+                AND uuid <> NEW.uuid
             ))
             OR
             (NEW.translations ? 'ru' AND EXISTS (
               SELECT 1 FROM research_interests
               WHERE translations ? 'ru'
                 AND translations->'ru'->>'title' = NEW.translations->'ru'->>'title'
+                AND uuid <> NEW.uuid
             ))
             OR
             (NEW.translations ? 'en' AND EXISTS (
               SELECT 1 FROM research_interests
               WHERE translations ? 'en'
                 AND translations->'en'->>'title' = NEW.translations->'en'->>'title'
+                AND uuid <> NEW.uuid
             ))
           ) THEN
             RAISE EXCEPTION 'Dublicate keys error!!'

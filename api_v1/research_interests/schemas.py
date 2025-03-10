@@ -34,7 +34,7 @@ class GetResearchInterests(BaseModel):
     using_count: int = 0
     translations: (
         Annotated[
-            dict[Languages, dict[str, str]],
+            dict[str, dict[str, str]],
             Field(
                 default=None,
                 example={lang.value: {"title": "text"} for lang in Languages},
