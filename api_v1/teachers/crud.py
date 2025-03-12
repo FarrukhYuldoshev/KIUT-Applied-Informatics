@@ -33,6 +33,46 @@ UPLOAD_DIR = Pathlib("static/files")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+async def set_details_for_teacher(
+    teacher: Teachers, session: AsyncSession, lang: Languages = None
+) -> GetTeachersWithResearchInterests:
+    research_interests = await get_research_interests_of_teacher(
+        session=session,
+        teacher_id=teacher.uuid,
+        lang=lang,
+    )
+    publications = await get_publications_of_teacher(
+        session=session, teacher_id=teacher.uuid
+    )
+    work_experiences = await get_work_experiences_of_teacher(
+        session=session, teacher_id=teacher.uuid, lang=lang
+    )
+    educations = await get_education_of_teacher(
+        teacher_id=teacher.uuid, lang=lang, session=session
+    )
+    response_model = GetTeachersWithResearchInterests(
+        uuid=teacher.uuid,
+        email=teacher.email,
+        scopus_link=teacher.scopus_link,
+        image=teacher.image,
+        research_interest_viewonly=research_interests,
+        publications_viewonly=publications,
+        work_experiences=work_experiences,
+        educations=educations,
+    )
+    if lang is not None:
+        response_model.full_name = teacher.translations.get(lang.value, {}).get(
+            "full_name"
+        )
+        response_model.biography = teacher.translations.get(lang.value, {}).get(
+            "biography"
+        )
+        response_model.role = teacher.translations.get(lang.value, {}).get("role")
+    else:
+        response_model.translations = teacher.translations
+    return response_model
+
+
 async def create_file(file: UploadFile, upload_path=UPLOAD_DIR) -> str:
     try:
         file_extension = file.filename.split(".")[-1]
@@ -56,55 +96,18 @@ async def create_file(file: UploadFile, upload_path=UPLOAD_DIR) -> str:
 async def get_teacher_or_none(
     teacher_id: uuid.UUID,
     session: AsyncSession,
-    lang: Languages = None,
 ):
     stmt = select(Teachers).where(Teachers.uuid == teacher_id)
-    research_interests = await get_research_interests_of_teacher(
-        session=session,
-        teacher_id=teacher_id,
-        lang=lang,
-    )
-    publications = await get_publications_of_teacher(
-        session=session, teacher_id=teacher_id
-    )
-    work_experiences = await get_work_experiences_of_teacher(
-        session=session, teacher_id=teacher_id, lang=lang
-    )
-    educations = await get_education_of_teacher(
-        teacher_id=teacher_id, lang=lang, session=session
-    )
     result = await session.scalar(stmt)
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
     else:
-        response_model = GetTeachersWithResearchInterests(
-            uuid=result.uuid,
-            email=result.email,
-            scopus_link=result.scopus_link,
-            image=result.image,
-            research_interest_viewonly=research_interests,
-            publications_viewonly=publications,
-            work_experiences=work_experiences,
-            educations=educations,
-        )
-        if lang is not None:
-            response_model.full_name = result.translations.get(lang.value, {}).get(
-                "full_name"
-            )
-            response_model.biography = result.translations.get(lang.value, {}).get(
-                "biography"
-            )
-            response_model.role = result.translations.get(lang.value, {}).get("role")
-        else:
-            response_model.translations = result.translations
-        return response_model
+        return result
 
 
 async def create_teacher(session: AsyncSession, data: CreateTeacher) -> Teachers:
-    # file = await create_file(data.image)
-
     try:
         teacher: Teachers = await session.scalar(
             insert(Teachers).values(**data.model_dump()).returning(Teachers)

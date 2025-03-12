@@ -42,8 +42,22 @@ async def set_image_to_teacher(result=Depends(crud.set_image)):
 @router.get("/", response_model=list[GetTeachers], response_model_exclude_unset=True)
 async def get_all_teachers(
     session: AsyncSession = Depends(db_sessions.session_dependency),
+    lang: Annotated[Languages, Query(alias="lang")] = None,
 ):
     result = await crud.get_all_teachers(session=session)
+    if lang is not None:
+        return [
+            GetTeachers(
+                uuid=obj.uuid,
+                full_name=obj.translations.get(lang, {}).get("full_name"),
+                biography=obj.translations.get(lang, {}).get("biography"),
+                role=obj.translations.get(lang, {}).get("role"),
+                email=obj.email,
+                scopus_link=obj.scopus_link,
+                image=obj.image,
+            )
+            for obj in result
+        ]
     return result
 
 
@@ -57,13 +71,18 @@ async def get_teacher(
     session: AsyncSession = Depends(db_sessions.session_dependency),
     lang: Annotated[Languages, Query(alias="lang")] = None,
 ):
-    result = await crud.get_teacher_or_none(
-        teacher_id=teacher_id, session=session, lang=lang
+    result = await crud.get_teacher_or_none(teacher_id=teacher_id, session=session)
+    response_model = await crud.set_details_for_teacher(
+        teacher=result, session=session, lang=lang
     )
-    return result
+    return response_model
 
 
-@router.patch("/{teacher_id}", response_model=GetTeachersWithResearchInterests)
+@router.patch(
+    "/{teacher_id}",
+    response_model=GetTeachersWithResearchInterests,
+    response_model_exclude_unset=True,
+)
 async def update_teacher(
     teacher_id: Annotated[uuid.UUID, Path(description="Teacher uuid")],
     data: UpdateTeacher,
@@ -73,7 +92,11 @@ async def update_teacher(
     result = await crud.update_teacher(
         teacher_id=teacher_id, data=data, session=session
     )
-    return result
+    response_model = await crud.set_details_for_teacher(
+        teacher=result,
+        session=session,
+    )
+    return response_model
 
 
 @router.delete("/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT)

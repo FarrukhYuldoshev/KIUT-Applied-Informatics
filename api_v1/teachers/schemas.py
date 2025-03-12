@@ -96,10 +96,10 @@ class GetTeachers(BaseModel):
     teacher_id: Annotated[
         UUID4, Field(default=..., alias="uuid", serialization_alias="uuid")
     ]
-    full_name: Annotated[str, Field(min_length=5, max_length=256)] = None
+    full_name: Annotated[str, Field(max_length=256)] = None
     email: Annotated[EmailStr, Field(...)]
-    role: Annotated[str, Field()] = None
-    biography: Annotated[str, Field(min_length=10)] = None
+    role: Annotated[str, Field()] | None = None
+    biography: Annotated[str, Field()] | None = None
     scopus_link: Annotated[Optional[str], Field()] = None
     image: Annotated[str, Field(..., description="Teacher's image")]
     translations: Annotated[dict[Languages, dict[str, str]], Field()] = None
