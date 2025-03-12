@@ -1,29 +1,33 @@
 import uuid
 from pathlib import Path as Pathlib
+from typing import Annotated
+
 import aiofiles
 import starlette
 from sqlalchemy import (
     select,
     insert,
     ScalarResult,
-    update,
     delete,
     case,
-    String,
-    cast,
-    text,
+    update,
+    inspect,
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
-from core.models import Teachers, ResearchInterestsTeacher
-from fastapi import HTTPException, UploadFile, Path
+from core.models import Teachers, ResearchInterestsTeacher, ResearchInterests
+from fastapi import HTTPException, UploadFile, Path, File, Depends
 from starlette import status
 from core.models.enumrators import Roles, Languages
+from core.settings import db_sessions
 from .schemas import CreateTeacher, UpdateTeacher, GetTeachersWithResearchInterests
 from pydantic import EmailStr, ValidationError
-from api_v1.educations.crud import get_educations_of_teacher
+from api_v1.research_interests.crud import get_research_interests_of_teacher
+from api_v1.publications.crud import get_publications_of_teacher
+from api_v1.work_experience.crud import get_work_experiences_of_teacher
+from api_v1.educations.crud import get_education_of_teacher
 
 UPLOAD_DIR = Pathlib("static/files")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,14 +56,22 @@ async def create_file(file: UploadFile, upload_path=UPLOAD_DIR) -> str:
 async def get_teacher_or_none(
     teacher_id: uuid.UUID,
     session: AsyncSession,
+    lang: Languages = None,
 ):
-    stmt = (
-        select(Teachers)
-        .where(Teachers.uuid == teacher_id)
-        .options(selectinload(Teachers.research_interest_viewonly))
-        .options(selectinload(Teachers.publications_viewonly))
-        .options(selectinload(Teachers.educations))
-        .options(selectinload(Teachers.work_experiences))
+    stmt = select(Teachers).where(Teachers.uuid == teacher_id)
+    research_interests = await get_research_interests_of_teacher(
+        session=session,
+        teacher_id=teacher_id,
+        lang=lang,
+    )
+    publications = await get_publications_of_teacher(
+        session=session, teacher_id=teacher_id
+    )
+    work_experiences = await get_work_experiences_of_teacher(
+        session=session, teacher_id=teacher_id, lang=lang
+    )
+    educations = await get_education_of_teacher(
+        teacher_id=teacher_id, lang=lang, session=session
     )
     result = await session.scalar(stmt)
     if result is None:
@@ -67,45 +79,39 @@ async def get_teacher_or_none(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
         )
     else:
-        return result
+        response_model = GetTeachersWithResearchInterests(
+            uuid=result.uuid,
+            email=result.email,
+            scopus_link=result.scopus_link,
+            image=result.image,
+            research_interest_viewonly=research_interests,
+            publications_viewonly=publications,
+            work_experiences=work_experiences,
+            educations=educations,
+        )
+        if lang is not None:
+            response_model.full_name = result.translations.get(lang.value, {}).get(
+                "full_name"
+            )
+            response_model.biography = result.translations.get(lang.value, {}).get(
+                "biography"
+            )
+            response_model.role = result.translations.get(lang.value, {}).get("role")
+        else:
+            response_model.translations = result.translations
+        return response_model
 
 
 async def create_teacher(session: AsyncSession, data: CreateTeacher) -> Teachers:
-    file = await create_file(data.image)
-    data.image = file
-    role: Roles = Roles.get_position_by_key(data.role.name)
-    translations: dict[Languages, dict[str, str]] = {
-        Languages.uz: {
-            "full_name": data.full_name_uz,
-            "role": role.get_name(Languages.uz.value),
-            "biography": data.biography_uz,
-        },
-        Languages.ru: {
-            "full_name": data.full_name_ru,
-            "role": role.get_name(Languages.ru.value),
-            "biography": data.biography_ru,
-        },
-        Languages.en: {
-            "full_name": data.full_name_en,
-            "role": role.get_name(Languages.en.value),
-            "biography": data.biography_en,
-        },
-    }
-    data_in: dict = {
-        "translations": translations,
-        "scopus_link": data.scopus_link,
-        "email": data.email,
-        "image": data.image,
-    }
+    # file = await create_file(data.image)
+
     try:
         teacher: Teachers = await session.scalar(
-            insert(Teachers).values(data_in).returning(Teachers)
+            insert(Teachers).values(**data.model_dump()).returning(Teachers)
         )
         await session.commit()
     except IntegrityError as e:
         await session.rollback()
-        if Pathlib(data.image).exists():
-            Pathlib(data.image).unlink()
         if e.orig.__str__().startswith(
             "<class 'asyncpg.exceptions.UniqueViolationError'>"
         ):
@@ -120,31 +126,51 @@ async def create_teacher(session: AsyncSession, data: CreateTeacher) -> Teachers
     return teacher
 
 
+async def set_image(
+    image: Annotated[UploadFile, File(...)],
+    teacher_id: Annotated[uuid.UUID, Path(alias="uuid")],
+    session: AsyncSession = Depends(db_sessions.session_dependency),
+):
+    stmt = select(Teachers.uuid).where(Teachers.uuid == teacher_id)
+    result = await session.scalar(stmt)
+    if result is not None:
+        file = await create_file(image, UPLOAD_DIR)
+        stmt = (
+            update(Teachers)
+            .where(Teachers.uuid == teacher_id)
+            .values(image=file)
+            .returning(Teachers)
+        )
+        try:
+            result = await session.scalar(stmt)
+            await session.commit()
+        except IntegrityError as e:
+            await session.rollback()
+            if Pathlib(file).exists():
+                Pathlib(file).unlink()
+        return result
+    else:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Teacher not found")
+
+
 async def update_teacher(
     teacher_id: uuid.UUID, data: UpdateTeacher, session: AsyncSession
 ):
     teacher = await get_teacher_or_none(teacher_id=teacher_id, session=session)
-    print(data.email)
-    if data.email is not None:
-        try:
-            EmailStr._validate(data.email)
-        except Exception:
-            raise HTTPException(status_code=422, detail="Invalid email adress")
-    if not isinstance(data.image, str) and data.image is not None:
-        file = await create_file(data.image)
-        data.image = file
-        if Pathlib(teacher.image).exists():
-            Pathlib(teacher.image).unlink()
-    for key, value in data.__dict__.items():
-        if value != None and len(value) > 0:
-            if key == "image":
-                if len(value) == 0:
-                    continue
-            elif key == "role":
-                value = Roles(value)
-            print(key, type(value))
+    for key, value in data.model_dump(exclude_unset=True).items():
+        if key == "translations":
+            teacher.translations.update(**data.translations)
+        else:
             setattr(teacher, key, value)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as e:
+        if "UniqueViolationError" in str(e.orig):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Teacher email conflict:  {e}",
+            )
+        raise HTTPException(status_code=400, detail="Bad request")
     return teacher
 
 
@@ -152,6 +178,8 @@ async def delete_teacher(teacher: Teachers, session: AsyncSession):
     stmt = delete(Teachers).where(Teachers.uuid == teacher.uuid)
     await session.execute(stmt)
     await session.commit()
+    if Pathlib(teacher.image).exists() and teacher.image != "default.png":
+        Pathlib(teacher.image).unlink()
 
 
 async def get_all_teachers(session: AsyncSession) -> ScalarResult[Teachers]:

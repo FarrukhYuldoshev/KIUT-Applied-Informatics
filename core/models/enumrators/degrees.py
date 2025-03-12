@@ -1,30 +1,42 @@
-import enum
+from enum import Enum
 
 
-class DegreesEn(str, enum.Enum):
-    Bsc = "Bachelor's Degree"
-    Dsc = "Doctor of Science"
-    Phd = "Doctor of Philosophy"
-    Msc = "Master of Science"
+class Degrees(Enum):
+    Bsc = (
+        "Bachelor's Degree",
+        "Бакалавр (Степень бакалавра)",
+        "Bakalavr (Bakalavr darajasi)",
+        1,
+    )
+    Msc = (
+        "Master of Science",
+        "Магистр (Степень магистра)",
+        "Magistr (Magistr darajasi)",
+        2,
+    )
+    PhD = (
+        "Doctor of Philosophy",
+        "Доктор философии",
+        "Falsafa doktori",
+        3,
+    )
+    Dsc = (
+        "Doctor of Science",
+        "Доктор наук",
+        "Fan doktori",
+        4,
+    )
 
+    def __init__(self, en, uz, ru, level):
+        self.translations = {"en": en, "uz": uz, "ru": ru}
+        self.level = level
 
-class DegreesRu(str, enum.Enum):
-    Bsc = "Бакалавр (Степень бакалавра)"
-    Msc = "Магистр (Степень магистра)"
-    Phd = "Доктор философии"
-    Dsc = "Доктор наук"
+    def get_name(self, lang):
+        return self.translations.get(lang, self.translations["en"])
 
-
-class DegreesUz(str, enum.Enum):
-    Bsc = "Bakalavr (Bakalavr darajasi)"
-    Msc = "Magistr (Magistr darajasi)"
-    Phd = "Falsafa doktori"
-    Dsc = "Fan doktori"
-
-
-combined_values = (
-    [member.value for member in DegreesUz]
-    + [member.value for member in DegreesRu]
-    + [member.value for member in DegreesEn]
-)
-Degrees = enum.Enum("Degrees", {value: value for value in combined_values}, type=str)
+    @staticmethod
+    def get_position_by_key(key: str):
+        for role in Degrees:
+            if key in role.translations.values():
+                return role
+        return None

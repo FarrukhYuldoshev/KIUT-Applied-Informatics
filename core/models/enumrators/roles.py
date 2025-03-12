@@ -33,13 +33,7 @@ class Roles(Enum):
 
     @staticmethod
     def get_position_by_key(key: str):
-        return Roles.__members__.get(key, None)  # Agar yo‘q bo‘lsa, None qaytaradi
-
-
-class RolesForSelect(str, Enum):
-    HEAD_OF_DEPARTMENT = "Head of the department"
-    PROFESSOR = "Professor"
-    ASSOCIATE_PROFESSOR = "Associate professor"
-    SENIOR_LECTURER = "Senior Lecturer"
-    TEACHER = "Teacher"
-    STAFF = "Staff"
+        for role in Roles:
+            if key in role.translations.values():
+                return role
+        return None

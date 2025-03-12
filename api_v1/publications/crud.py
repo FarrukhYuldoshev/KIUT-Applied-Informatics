@@ -52,6 +52,25 @@ async def create_publication(
     return publication
 
 
+async def get_publications_of_teacher(session: AsyncSession, teacher_id: UUID4):
+    stmt = (
+        select(Publications)
+        .join(
+            PublicationsTeacher, Publications.uuid == PublicationsTeacher.publication_id
+        )
+        .options(selectinload(Publications.teachers_viewonly))
+        .where(PublicationsTeacher.teacher_id == teacher_id)
+    )
+    result = await session.scalars(stmt)
+    data: list[GetPublication] = []
+    if result is not None:
+        for publication in result:
+            temp = {**publication.__dict__}
+            temp.pop("_sa_instance_state")
+            data.append(GetPublication(**temp))
+    return data
+
+
 async def get_publication(
     publication_id: UUID4,
     session: AsyncSession = Depends(db_sessions.session_dependency),

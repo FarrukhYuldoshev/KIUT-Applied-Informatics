@@ -1,9 +1,11 @@
 from typing import TYPE_CHECKING
 from sqlalchemy import String, JSON, Column, UUID, text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from . import Base
-from .enumrators import Roles, Languages
+from .enumrators import Languages
+
 from uuid import uuid4
 
 if TYPE_CHECKING:
@@ -29,7 +31,7 @@ class Teachers(Base):
     image: Mapped[str] = mapped_column(String(100), nullable=True)
     scopus_link: Mapped[str] = mapped_column(String(256), nullable=True)
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
-        JSONB, default={}
+        MutableDict.as_mutable(JSONB), default={}
     )
     publications: Mapped[list["PublicationsTeacher"]] = relationship(
         back_populates="teacher", cascade="all, delete-orphan"

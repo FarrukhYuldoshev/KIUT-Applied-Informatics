@@ -11,14 +11,41 @@ from core.models.enumrators import Languages
 from .schemas import (
     CreateWorkExperience,
     UpdateWorkExperience,
+    GetWorkExperience,
 )
 from starlette import status
 
 
+def convert_sql_model_to_base_model(
+    work_experience: WorkExperience, lang: Languages = None
+) -> GetWorkExperience:
+    response_model = GetWorkExperience(
+        uuid=work_experience.uuid,
+        from_date=work_experience.from_date,
+        to_date=work_experience.to_date,
+        teacher_id=work_experience.teacher_id,
+    )
+    if lang is not None:
+        response_model.place = work_experience.translations.get(lang, {}).get("place")
+        response_model.role = work_experience.translations.get(lang, {}).get("role")
+    else:
+        response_model.translations = work_experience.translations
+    return response_model
+
+
+async def get_work_experiences_of_teacher(
+    session: AsyncSession, teacher_id: UUID, lang: Languages = None
+) -> list[GetWorkExperience]:
+    stmt = (
+        select(WorkExperience)
+        .where(WorkExperience.teacher_id == teacher_id)
+        .order_by(WorkExperience.from_date.desc(), WorkExperience.to_date.desc())
+    )
+    result = await session.scalars(stmt)
+    return [convert_sql_model_to_base_model(obj, lang=lang) for obj in result]
+
+
 async def create_work_experience(session: AsyncSession, data: CreateWorkExperience):
-    translation: dict[Languages, dict[str, str]] = {
-        data.lang: {"place": data.place, "role": data.role}
-    }
     stmt = select(Teachers.uuid).where(Teachers.uuid == data.teacher_id)
     teacher_id = await session.scalar(stmt)
     if teacher_id is None:
@@ -27,105 +54,30 @@ async def create_work_experience(session: AsyncSession, data: CreateWorkExperien
         )
     else:
         stmt = (
-            insert(WorkExperience)
-            .values(
-                from_date=data.from_date,
-                to_date=data.to_date,
-                teacher_id=teacher_id,
-                translations=translation,
-            )
-            .returning(
-                WorkExperience.uuid,
-                WorkExperience.translations[data.lang.value]["place"].label("place"),
-                WorkExperience.translations[data.lang.value]["role"].label("role"),
-                WorkExperience.from_date,
-                WorkExperience.to_date,
-                WorkExperience.teacher_id,
-            )
+            insert(WorkExperience).values(**data.model_dump()).returning(WorkExperience)
         )
-        result = await session.execute(stmt)
+        result = await session.scalar(stmt)
         await session.commit()
-        return result.one()
-
-
-# async def get_educations_of_teacher(
-#     teacher_id: UUID,
-#     session: AsyncSession,
-#     lang: Languages = None,
-# ):
-#     if lang is None:
-#         stmt = select(Education).where(Education.teacher_id == teacher_id)
-#         result = await session.scalars(stmt)
-#         return result
-#     else:
-#         stmt = select(
-#             Education.uuid,
-#             Education.from_date,
-#             Education.to_date,
-#             Education.translations[lang.value]["place"].label("place"),
-#             Education.translations[lang.value]["degree"].label("degree"),
-#             Education.teacher_id,
-#         )
-#         result = await session.execute(stmt)
-#         return result.all()
+        return result
 
 
 async def get_work_experience(
     work_experience_id: Annotated[UUID, Path(alias="work_experience_id")],
-    lang: Annotated[Languages, Query(alias="lang")] = None,
     session: AsyncSession = Depends(db_sessions.session_dependency),
-) -> Row:
-    if lang is None:
-        stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.teacher_id,
-            WorkExperience.translations,
-        ).where(WorkExperience.uuid == work_experience_id)
-        result = await session.execute(stmt)
-        edu = result.one_or_none()
+) -> WorkExperience:
+
+    stmt = select(WorkExperience).where(WorkExperience.uuid == work_experience_id)
+    result = await session.scalar(stmt)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Work experience not found")
     else:
-        stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.translations[lang.value]["place"].label("place"),
-            WorkExperience.translations[lang.value]["role"].label("role"),
-            WorkExperience.teacher_id,
-        ).where(WorkExperience.uuid == work_experience_id)
-        result = await session.execute(stmt)
-        edu = result.one_or_none()
-        print(edu)
-    if edu is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Education not found")
-    else:
-        return edu
+        return result
 
 
-async def get_all_work_experiences(
-    session: AsyncSession, lang: Languages = None
-) -> Sequence[Row]:
-    if lang is None:
-        stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.teacher_id,
-            WorkExperience.translations,
-        )
-        edu = await session.execute(stmt)
-    else:
-        stmt = select(
-            WorkExperience.uuid,
-            WorkExperience.from_date,
-            WorkExperience.to_date,
-            WorkExperience.translations[lang.value]["place"].label("place"),
-            WorkExperience.translations[lang.value]["role"].label("role"),
-            WorkExperience.teacher_id,
-        )
-        edu = await session.execute(stmt)
-    return edu.all()
+async def get_all_work_experiences(session: AsyncSession):
+    stmt = select(WorkExperience)
+    result = await session.scalars(stmt)
+    return result
 
 
 async def update_work_experience(
@@ -136,16 +88,13 @@ async def update_work_experience(
         result = await session.scalar(stmt)
         if result is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Teacher not found")
-
-    existing_we_id = work_experience.__getattr__("uuid")
-    stmt = (
-        update(WorkExperience)
-        .values(**data.model_dump(exclude_unset=True))
-        .where(WorkExperience.uuid == existing_we_id)
-    ).returning(WorkExperience)
-    result = await session.scalar(stmt)
+    for key, value in data.model_dump(exclude_unset=True).items():
+        if key == "translations":
+            work_experience.translations.update(**data.translations)
+        else:
+            setattr(work_experience, key, value)
     await session.commit()
-    return result
+    return work_experience
 
 
 async def delete_work_experience(session: AsyncSession, uuids: set[UUID]):

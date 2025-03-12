@@ -17,7 +17,7 @@ router = APIRouter(prefix="/teachers", tags=["Teachers API (Educations)"])
 
 
 @router.get(
-    "/educations/",
+    "/education/",
     response_model=list[GetEducation],
     response_model_exclude_unset=True,
 )
@@ -25,32 +25,42 @@ async def get_educations(
     lang: Annotated[Languages, Query(alias="lang")] = None,
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
-    data = await crud.get_all_educations(session=session, lang=lang)
-    return data
+    data = await crud.get_all_educations(session=session)
+    return [crud.convert_sql_model_to_base_model(obj, lang=lang) for obj in data]
 
 
 @router.get(
-    "/educations/{education_id}",
+    "/education/{education_id}",
     response_model=GetEducation,
+    response_model_exclude_unset=True,
 )
-async def get_educations(
+async def get_education(
+    lang: Annotated[Languages, Query(alias="lang")] = None,
     education=Depends(crud.get_education),
 ):
-    return education
+    return crud.convert_sql_model_to_base_model(education=education, lang=lang)
 
 
-@router.post("/educations/", response_model=GetEducation)
+@router.post(
+    "/education/",
+    response_model=GetEducation,
+    response_model_exclude_unset=True,
+)
 async def create_education(
+    input_data: CreateEducation,
     user=Depends(get_active_user),
-    data: CreateEducation = Depends(CreateEducation),
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
-    data = await crud.create_education(data=data, session=session)
+    data = await crud.create_education(data=input_data, session=session)
     return data
 
 
-@router.patch("/educations/{education_id}", response_model=GetEducation)
-async def update_education_patch(
+@router.patch(
+    "/education/{education_id}",
+    response_model=GetEducation,
+    response_model_exclude_unset=True,
+)
+async def update_education(
     data: UpdateEducation,
     education=Depends(crud.get_education),
     session: AsyncSession = Depends(db_sessions.session_dependency),
@@ -62,7 +72,7 @@ async def update_education_patch(
     return result
 
 
-@router.delete("/educations/", status_code=204)
+@router.delete("/education/", status_code=204)
 async def delete_education(
     data: Annotated[set[UUID], Body(...)],
     session: AsyncSession = Depends(db_sessions.session_dependency),

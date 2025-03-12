@@ -3,11 +3,17 @@ from typing import Annotated, Optional, Dict, Any, List, ClassVar
 from fastapi import Form, File, UploadFile
 from pydantic_core.core_schema import ValidationInfo
 
-from core.models.enumrators import Roles, RolesForSelect, Languages
-from pydantic import BaseModel, Field, EmailStr, model_validator, ConfigDict
+from core.models.enumrators import Roles, Languages
+from pydantic import (
+    BaseModel,
+    Field,
+    EmailStr,
+    ConfigDict,
+    field_validator,
+)
 from uuid import UUID as UUID4
 from api_v1.educations.schemas import GetEducation
-from api_v1.publications.schemas import GetPublicationWithoutTeacher
+from api_v1.publications.schemas import GetPublication
 from api_v1.work_experience.schemas import GetWorkExperience
 from api_v1.research_interests.schemas import GetResearchInterests
 
@@ -16,48 +22,74 @@ class OnlyUUID(BaseModel):
     uuid: UUID4 = Field(...)
 
 
-class CreateTeacher:
+class Translations:
+    fields: Dict[str, str] = {
+        "full_name": "text",
+        "biography": "text",
+        "role": "text",
+    }
+
+
+class CreateTeacher(BaseModel):
+    email: Annotated[EmailStr, Field(...)]
+    scopus_link: Annotated[str, Field(None, min_length=1, max_length=20)]
+    translations: Annotated[
+        Dict[Languages, Dict[str, str]],
+        Field(..., example={lang.value: Translations.fields for lang in Languages}),
+    ]
+    image: Annotated[str, Field(default="default.png")]
+
+    @field_validator("translations")
+    def validate_translations(
+        cls, value: Dict[Languages, Dict[str, str]]
+    ) -> Dict[Languages, Dict[str, str]]:
+        supporting_languages = set(lang.value for lang in Languages)
+        expected_keys = set(Translations.fields.keys())
+        roles_uz = [role.translations["uz"] for role in Roles]
+        roles_ru = [role.translations["ru"] for role in Roles]
+        roles_en = [role.translations["en"] for role in Roles]
+        current_role = None
+        for lang, data in value.items():
+            if not isinstance(lang, Languages):
+                raise ValueError(f"Supporting languages only {supporting_languages}")
+            supporting_languages.remove(lang.value)
+            data_keys = set(data.keys())
+            if extra_keys := data_keys - expected_keys:
+                raise ValueError(f"Unexpected keys in translations: {extra_keys}")
+            if missing_keys := expected_keys - data_keys:
+                raise ValueError(f"Missing keys in translations: {missing_keys}")
+            if lang == Languages.en:
+                if data["role"] not in roles_en:
+                    raise ValueError(
+                        f"Unexpected role in english translations: {data['role']} Expected: {roles_en}"
+                    )
+            elif lang == Languages.ru:
+                if data["role"] not in roles_ru:
+                    raise ValueError(
+                        f"Unexpected role in russian translations: {data['role']} Expected: {roles_ru}"
+                    )
+            else:
+                if data["role"] not in roles_uz:
+                    raise ValueError(
+                        f"Unexpected role in uzbek translations: {data['role']} Expected: {roles_uz}"
+                    )
+
+            if current_role is None:
+                current_role = Roles.get_position_by_key(data["role"])
+            elif current_role is not None and current_role != Roles.get_position_by_key(
+                data["role"]
+            ):
+                raise ValueError("Roles not matching!")
+        if len(supporting_languages) > 0:
+            raise ValueError(f"Missing languages:  {supporting_languages}")
+        return value
+
+
+class UploadImage:
     def __init__(
-        self,
-        full_name_en: Annotated[
-            str,
-            Form(..., min_length=5, max_length=256, description="Full name in English"),
-        ],
-        full_name_ru: Annotated[
-            str,
-            Form(..., min_length=5, max_length=256, description="Full name in Russian"),
-        ],
-        full_name_uz: Annotated[
-            str,
-            Form(..., min_length=5, max_length=256, description="Full name in Uzbek"),
-        ],
-        biography_en: Annotated[
-            str,
-            Form(..., min_length=20, description="Biography in English"),
-        ],
-        biography_ru: Annotated[
-            str,
-            Form(..., min_length=20, description="Biography in Russian"),
-        ],
-        biography_uz: Annotated[
-            str,
-            Form(..., min_length=20, description="Biography in Uzbek"),
-        ],
-        email: Annotated[EmailStr, Form(...)],
-        role: Annotated[RolesForSelect, Form(...)],
-        image: Annotated[UploadFile, File(description="Teacher's image")],
-        scopus_link: Annotated[Optional[str], Form()] = "",
+        self, image: Annotated[UploadFile, File(description="Teacher's image")]
     ):
-        self.full_name_en = full_name_en
-        self.full_name_ru = full_name_ru
-        self.full_name_uz = full_name_uz
-        self.biography_en = biography_en
-        self.biography_ru = biography_ru
-        self.biography_uz = biography_uz
-        self.email = email
-        self.role = role
         self.image = image
-        self.scopus_link = scopus_link
 
 
 class GetTeachers(BaseModel):
@@ -67,6 +99,7 @@ class GetTeachers(BaseModel):
     full_name: Annotated[str, Field(min_length=5, max_length=256)] = None
     email: Annotated[EmailStr, Field(...)]
     role: Annotated[str, Field()] = None
+    biography: Annotated[str, Field(min_length=10)] = None
     scopus_link: Annotated[Optional[str], Field()] = None
     image: Annotated[str, Field(..., description="Teacher's image")]
     translations: Annotated[dict[Languages, dict[str, str]], Field()] = None
@@ -76,10 +109,12 @@ class GetTeachers(BaseModel):
 class GetTeachersWithResearchInterests(GetTeachers):
     research_interest_viewonly: Annotated[
         List[GetResearchInterests],
-        Field(serialization_alias="research_interests"),
+        Field(
+            serialization_alias="research_interests", alias="research_interest_viewonly"
+        ),
     ]
     publications_viewonly: Annotated[
-        List["GetPublicationWithoutTeacher"], Field(serialization_alias="publications")
+        List["GetPublication"], Field(serialization_alias="publications")
     ]
     work_experiences: Annotated[
         List["GetWorkExperience"],
@@ -89,17 +124,53 @@ class GetTeachersWithResearchInterests(GetTeachers):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UpdateTeacher:
-    def __init__(
-        self,
-        full_name: Optional[str] = Form(default="", max_length=256),
-        email: Optional[str] = Form(default=None),
-        role: Optional[str] = Form(default=""),
-        scopus_link: Optional[str] = Form(default=""),
-        image: UploadFile | str | None = File(None, media_type="image/*"),
-    ):
-        self.full_name = full_name
-        self.email = email
-        self.role = role
-        self.scopus_link = scopus_link
-        self.image = image
+class UpdateTeacher(CreateTeacher):
+    email: Annotated[EmailStr, Field(None)]
+    scopus_link: Annotated[str, Field(None, min_length=1, max_length=20)]
+    translations: Annotated[
+        Dict[Languages, Dict[str, str]],
+        Field(None, example={lang.value: Translations.fields for lang in Languages}),
+    ]
+    image: Annotated[str, Field("default.png", exclude=True)]
+
+    @field_validator("translations")
+    def validate_translations(
+        cls, value: Dict[Languages, Dict[str, str]]
+    ) -> Dict[Languages, Dict[str, str]]:
+        expected_keys = set(Translations.fields.keys())
+        roles_uz = [role.translations["uz"] for role in Roles]
+        roles_ru = [role.translations["ru"] for role in Roles]
+        roles_en = [role.translations["en"] for role in Roles]
+        current_role = None
+        for lang, data in value.items():
+            if not isinstance(lang, Languages):
+                raise ValueError(f"Unexpected language: {lang}")
+            data_keys = set(data.keys())
+            if extra_keys := data_keys - expected_keys:
+                raise ValueError(f"Unexpected keys in translations: {extra_keys}")
+            if data.get("role", None) is not None:
+                if lang == Languages.en:
+                    if data["role"] not in roles_en:
+                        raise ValueError(
+                            f"Unexpected role in english translations: {data['role']} Expected: {roles_en}"
+                        )
+                elif lang == Languages.ru:
+                    if data["role"] not in roles_ru:
+                        raise ValueError(
+                            f"Unexpected role in russian translations: {data['role']} Expected: {roles_ru}"
+                        )
+                else:
+                    if data["role"] not in roles_uz:
+                        raise ValueError(
+                            f"Unexpected role in uzbek translations: {data['role']} Expected: {roles_uz}"
+                        )
+                role_temp = Roles.get_position_by_key(data["role"])
+                if current_role is None:
+                    current_role = role_temp
+                elif (
+                    current_role is not None
+                    and role_temp is not None
+                    and current_role != role_temp
+                ):
+                    raise ValueError("Roles not matching!")
+        return value

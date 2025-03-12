@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 from sqlalchemy import UUID, text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from uuid import uuid4
 from . import Base
@@ -26,6 +27,6 @@ class Education(Base):
         UUID(as_uuid=True), ForeignKey("teachers.uuid", ondelete="CASCADE")
     )
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
-        JSONB, default={}
+        MutableDict.as_mutable(JSONB), default={}
     )
     teacher: Mapped["Teachers"] = relationship(back_populates="educations")

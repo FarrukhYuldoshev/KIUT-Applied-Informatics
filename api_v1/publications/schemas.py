@@ -1,5 +1,5 @@
 from fastapi import Form
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import Annotated, Optional
 from uuid import UUID as UUID4
 from core.models.enumrators import Roles
@@ -7,6 +7,7 @@ from core.models.enumrators import Roles
 
 class OnlyUUID(BaseModel):
     uuid: UUID4
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GetTeachers(BaseModel):
@@ -44,8 +45,9 @@ class GetPublication(BaseModel):
     link: Optional[str] = None
     pre_print_link: Optional[str] = None
     teachers_viewonly: Optional[list[OnlyUUID]] = Field(
-        default=None, serialization_alias="teachers"
+        default=None, serialization_alias="teachers", alias="teachers_viewonly"
     )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UpdatePublication(BaseModel):
@@ -59,6 +61,7 @@ class GetPublicationWithoutTeacher(BaseModel):
     title: str
     link: Optional[str] = None
     pre_print_link: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TeacherWithPublications(GetTeachers):

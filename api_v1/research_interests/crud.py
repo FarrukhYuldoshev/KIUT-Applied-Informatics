@@ -211,6 +211,51 @@ async def get_one_research_interests(
         return data
 
 
+async def get_research_interests_of_teacher(
+    session: AsyncSession, teacher_id: uuid.UUID, lang: Languages = None
+):
+    cte = (
+        select(
+            ResearchInterestsTeacher.research_interests_id,
+            ResearchInterestsTeacher.teacher_id,
+            func.count(ResearchInterestsTeacher.research_interests_id)
+            .over(partition_by=ResearchInterestsTeacher.research_interests_id)
+            .label("using_count"),
+        )
+        .join(
+            ResearchInterests,
+            onclause=ResearchInterestsTeacher.research_interests_id
+            == ResearchInterests.uuid,
+        )
+        .cte("virtual")
+    )
+    stmt = (
+        select(ResearchInterests, cte.c.using_count)
+        .options(selectinload(ResearchInterests.teachers_viewonly))
+        .join(cte, ResearchInterests.uuid == cte.c.research_interests_id)
+        .where(cte.c.teacher_id == teacher_id)
+    )
+    results = await session.execute(stmt)
+    results = results.all()
+    data: list[GetResearchInterests] = []
+    for result in results:
+        research: ResearchInterests = result.__getattr__(ResearchInterests)
+        using_count = result.__getattr__("using_count")
+        model_research = GetResearchInterests(
+            uuid=research.uuid, teachers_viewonly=research.teachers_viewonly
+        )
+        data.append(model_research)
+        if lang is not None:
+            model_research.title = research.translations.get(lang, {}).get("title")
+        else:
+            model_research.translations = research.translations
+        if using_count is not None:
+            model_research.using_count = using_count
+        else:
+            model_research.using_count = 0
+    return data
+
+
 async def update_research_interests(
     uuid4: Annotated[uuid.UUID, ...],
     session: AsyncSession,

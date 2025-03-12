@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from sqlalchemy import UUID, text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from .base import Base
@@ -22,9 +23,7 @@ class AcademicPrograms(Base):
         server_default=text("uuid_generate_v4()"),
     )
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
-        JSONB,
-        default={},
-        # title, type {bakalavr, magistratura} study_format: Kunduzgi sirtqi kechki
+        MutableDict.as_mutable(JSONB), default={}
     )
     year_of_study: Mapped[int] = mapped_column(nullable=False, default=1)
     subjects: Mapped[list["Subjects"]] = relationship(

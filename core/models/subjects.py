@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 from sqlalchemy import UUID, text, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from .base import Base
 from .enumrators import Languages
@@ -20,7 +21,7 @@ class Subjects(Base):
         server_default=text("uuid_generate_v4()"),
     )
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
-        JSONB, default={}  # fields: name, description,
+        MutableDict.as_mutable(JSONB), default={}
     )
     credits: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     semester: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

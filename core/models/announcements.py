@@ -1,6 +1,7 @@
 from typing import List
 from sqlalchemy import UUID, text, String, Text, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import mapped_column, Mapped
 from uuid import uuid4
 from .base import Base
@@ -21,7 +22,7 @@ class Announcements(Base):
         DateTime(), default=datetime.datetime.now(), nullable=False
     )
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
-        JSONB, nullable=False, default={}
+        MutableDict.as_mutable(JSONB), default={}
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(),
