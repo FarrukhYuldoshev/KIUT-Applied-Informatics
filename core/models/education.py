@@ -30,3 +30,6 @@ class Education(Base):
         MutableDict.as_mutable(JSONB), default={}
     )
     teacher: Mapped["Teachers"] = relationship(back_populates="educations")
+
+    def __str__(self):
+        return f"Education Place: Teacher_id: {self.teacher_id} {self.translations.get(Languages.en, {}).get('place')} Degree: {self.translations.get(Languages.en, {}).get('degree')} id: #{self.uuid}"

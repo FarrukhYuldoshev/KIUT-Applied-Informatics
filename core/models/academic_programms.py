@@ -29,3 +29,6 @@ class AcademicPrograms(Base):
     subjects: Mapped[list["Subjects"]] = relationship(
         back_populates="academic_program",
     )
+
+    def __str__(self):
+        return f"Academic Program: #{self.uuid}, title: {self.translations.get(Languages.en, {}).get('title')}"

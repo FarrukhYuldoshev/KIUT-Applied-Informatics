@@ -27,14 +27,22 @@ router = APIRouter(
 )
 farrukh = User(
     username="admin",
-    password=auth_utils.hash_password(password="12345"),
+    password=auth_utils.hash_password(password="13579"),
     email="communityfarrukh@gmail.com",
 )
-javoxir = User(username="javoxir", password=auth_utils.hash_password(password="12345"))
+# javoxir = User(username="javoxir", password=auth_utils.hash_password(password="12345"))
 users: dict[str, User] = {
     farrukh.username: farrukh,
-    javoxir.username: javoxir,
+    # javoxir.username: javoxir,
 }
+
+
+def check_user(username: str, password: str) -> bool:
+    if not (user := users.get(username)):
+        return False
+    if not auth_utils.check_password(password, user.password):
+        return False
+    return True
 
 
 async def validate_auth_user(

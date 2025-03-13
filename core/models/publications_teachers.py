@@ -17,6 +17,10 @@ class PublicationsTeacher(Base):
     teacher_id: Mapped[str] = mapped_column(
         UUID(as_uuid=True), ForeignKey("teachers.uuid", ondelete="CASCADE")
     )
-    teacher: Mapped["Teachers"] = relationship(back_populates="publications")
-    publication: Mapped["Publications"] = relationship(back_populates="teachers")
+    teacher: Mapped["Teachers"] = relationship(
+        back_populates="publications", overlaps="publications_viewonly"
+    )
+    publication: Mapped["Publications"] = relationship(
+        back_populates="teachers", overlaps="publications_viewonly"
+    )
     __table_args__ = (UniqueConstraint("publication_id", "teacher_id"),)

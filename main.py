@@ -3,6 +3,17 @@ from fastapi import FastAPI
 from api_v1 import router as api_router
 from demo_auth import jwt_router
 from fastapi.middleware.cors import CORSMiddleware
+from sqladmin import Admin
+from core.settings import db_sessions
+from admin import (
+    TeachersView,
+    ResearchInterestsView,
+    PublicationsView,
+    EducationView,
+    SubjectsView,
+    AcademicProgramsView,
+)
+from admin.auth import authentication_backend
 
 app = FastAPI(
     title="Applied Informatics",
@@ -21,7 +32,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+admin = Admin(
+    app, engine=db_sessions.engine, authentication_backend=authentication_backend
+)
+admin.add_view(TeachersView)
+admin.add_view(ResearchInterestsView)
+admin.add_view(PublicationsView)
+admin.add_view(EducationView)
+admin.add_view(SubjectsView)
+admin.add_view(AcademicProgramsView)
 app.include_router(api_router)
 app.include_router(jwt_router)
 

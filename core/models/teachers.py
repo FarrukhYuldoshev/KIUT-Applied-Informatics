@@ -39,15 +39,15 @@ class Teachers(Base):
     publications_viewonly: Mapped[list["Publications"]] = relationship(
         back_populates="teachers_viewonly",
         secondary="publications_teachers",
-        viewonly=True,
+        overlaps="publications",
     )
     research_interests: Mapped[list["ResearchInterestsTeacher"]] = relationship(
         back_populates="teacher", cascade="all, delete-orphan"
     )
     research_interest_viewonly: Mapped[list["ResearchInterests"]] = relationship(
         back_populates="teachers_viewonly",
-        viewonly=True,
         secondary="research_interests_teachers",
+        overlaps="research_interests",
     )
     work_experiences: Mapped[list["WorkExperience"]] = relationship(
         back_populates="teacher",
@@ -56,3 +56,6 @@ class Teachers(Base):
     educations: Mapped[list["Education"]] = relationship(
         back_populates="teacher", cascade="all, delete-orphan"
     )
+
+    def __str__(self):
+        return f"User #{self.email} {self.translations[Languages.en].get('full_name')}"

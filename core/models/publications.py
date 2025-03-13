@@ -24,10 +24,13 @@ class Publications(Base):
     link: Mapped[str] = mapped_column(String, nullable=True)
     pre_print_link: Mapped[str] = mapped_column(String, nullable=True)
     teachers: Mapped[list["PublicationsTeacher"]] = relationship(
-        back_populates="publication"
+        back_populates="publication", overlaps="publications_viewonly"
     )
     teachers_viewonly: Mapped[list["Teachers"]] = relationship(
         back_populates="publications_viewonly",
         secondary="publications_teachers",
-        viewonly=True,
+        # viewonly=True,
     )
+
+    def __str__(self):
+        return f"Publications(#{self.uuid}, title: {self.title} pre_print_link: {self.pre_print_link}, link: {self.link})"

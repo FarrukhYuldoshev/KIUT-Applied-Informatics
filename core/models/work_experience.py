@@ -28,8 +28,11 @@ class WorkExperience(Base):
         MutableDict.as_mutable(JSONB), default={}
     )
     teacher: Mapped[list["Teachers"]] = relationship(back_populates="work_experiences")
+
     # __table_args__ = (
     #     UniqueConstraint(
     #         "place", "role", "teacher_id", name="work_experience_title_teacher_id_uidx"
     #     ),
     # )
+    def __str__(self):
+        return f"WorkExperience Teacher_id: {self.teacher_id} Place: {self.translations.get(Languages.en, {}).get('place')} Role: {self.translations.get(Languages.en, {}).get('role')} id: #{self.uuid}"

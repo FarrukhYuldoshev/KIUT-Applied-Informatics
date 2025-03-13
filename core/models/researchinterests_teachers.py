@@ -29,9 +29,11 @@ class ResearchInterestsTeacher(Base):
         nullable=False,
     )
     research_interest: Mapped["ResearchInterests"] = relationship(
-        back_populates="teachers"
+        back_populates="teachers", overlaps="research_interest_viewonly"
     )
-    teacher: Mapped["Teachers"] = relationship(back_populates="research_interests")
+    teacher: Mapped["Teachers"] = relationship(
+        back_populates="research_interests", overlaps="research_interest_viewonly"
+    )
     __table_args__ = (
         UniqueConstraint(
             "research_interests_id", "teacher_id", name="research_interests_teacher_unx"

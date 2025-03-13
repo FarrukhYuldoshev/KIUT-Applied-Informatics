@@ -25,12 +25,16 @@ class ResearchInterests(Base):
     teachers: Mapped[list["ResearchInterestsTeacher"]] = relationship(
         back_populates="research_interest",
         cascade="all, delete-orphan",
+        overlaps="research_interest_viewonly",
     )
     translations: Mapped[dict[Languages, dict[str, str]]] = mapped_column(
         MutableDict.as_mutable(JSONB), default={}
     )
     teachers_viewonly: Mapped[list["Teachers"]] = relationship(
         back_populates="research_interest_viewonly",
-        viewonly=True,
+        # viewonly=True,
         secondary="research_interests_teachers",
     )
+
+    def __str__(self):
+        return f"ResearchInterests(#{self.uuid}, title: {self.translations.get(Languages.en, {}).get('title', '')})"
