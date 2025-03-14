@@ -5,6 +5,7 @@ from .views import (
     EducationView,
     SubjectsView,
     AcademicProgramsView,
+    WorkExperienceView
 )
 
 __all__ = (
@@ -14,4 +15,5 @@ __all__ = (
     "EducationView",
     "SubjectsView",
     "AcademicProgramsView",
+    "WorkExperienceView"
 )

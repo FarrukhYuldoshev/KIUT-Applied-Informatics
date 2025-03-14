@@ -12,6 +12,7 @@ from admin import (
     EducationView,
     SubjectsView,
     AcademicProgramsView,
+    WorkExperienceView,
 )
 from admin.auth import authentication_backend
 
@@ -39,6 +40,7 @@ admin.add_view(TeachersView)
 admin.add_view(ResearchInterestsView)
 admin.add_view(PublicationsView)
 admin.add_view(EducationView)
+admin.add_view(WorkExperienceView)
 admin.add_view(SubjectsView)
 admin.add_view(AcademicProgramsView)
 app.include_router(api_router)

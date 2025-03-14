@@ -10,6 +10,8 @@ class TeachersView(ModelView, model=Teachers):
     icon = "fa-solid fa-users"
     category = "Teachers information"
     column_searchable_list = [Teachers.translations]
+    page_size = 50
+    page_size_options = [50, 100, 200]
     column_list = [
         Teachers.uuid,
         "full_name",
@@ -30,6 +32,8 @@ class TeachersView(ModelView, model=Teachers):
         Teachers.translations,
         Teachers.publications_viewonly,
         Teachers.research_interest_viewonly,
+        Teachers.work_experiences,
+        Teachers.educations,
     ]
 
 
@@ -39,9 +43,12 @@ class ResearchInterestsView(ModelView, model=ResearchInterests):
     icon = "fa-solid fa-book"
     category = "Teachers information"
     column_searchable_list = [ResearchInterests.translations]
+    page_size = 100
+    page_size_options = [100, 200]
     column_list = [
         ResearchInterests.uuid,
         "title",
+        ResearchInterests.teachers_viewonly,
     ]
     column_formatters = {
         "title": lambda m, a: (
@@ -63,8 +70,11 @@ class PublicationsView(ModelView, model=Publications):
     icon = "fa-solid fa-book-open"
     category = "Teachers information"
     column_searchable_list = [Publications.title]
+    page_size = 100
+    page_size_options = [100, 200]
     column_list = [
         Publications.uuid,
+        Publications.teachers_viewonly,
         Publications.title,
     ]
     form_columns = [
@@ -81,13 +91,15 @@ class EducationView(ModelView, model=Education):
     icon = "fa-solid fa-graduation-cap"
     category = "Teachers information"
     column_searchable_list = [Education.translations]
+    page_size = 100
+    page_size_options = [100, 200]
     column_list = [
         Education.uuid,
         "place",
         "degree",
+        Education.teacher,
         Education.from_date,
         Education.to_date,
-        Education.teacher_id,
     ]
     column_formatters = {
         "place": lambda m, a: (
@@ -108,6 +120,8 @@ class SubjectsView(ModelView, model=Subjects):
     icon = "fa-solid fa-swatchbook"
     category = "Academic information"
     column_searchable_list = [Subjects.translations]
+    page_size = 100
+    page_size_options = [100, 200]
     column_list = [
         Subjects.uuid,
         "name",
@@ -151,6 +165,33 @@ class AcademicProgramsView(ModelView, model=AcademicPrograms):
         ),
         "study_format": lambda m, a: (
             m.translations.get("en", {}).get("study_format") if m.translations else None
+        ),
+        "translations": lambda m, a: json.dumps(
+            m.jsonb_field, indent=4, ensure_ascii=False
+        ),
+    }
+class WorkExperienceView(ModelView, model=WorkExperience):
+    name = "Work Experience"
+    name_plural = "Work Experiences"
+    icon = "fa-solid fa-briefcase"
+    category = "Teachers information"
+    column_searchable_list = [WorkExperience.translations]
+    page_size = 100
+    page_size_options = [100, 200]
+    column_list = [
+        WorkExperience.uuid,
+        "place",
+        "role",
+        WorkExperience.teacher,
+        WorkExperience.from_date,
+        WorkExperience.to_date,
+    ]
+    column_formatters = {
+        "place": lambda m, a: (
+            m.translations.get("en", {}).get("place") if m.translations else None
+        ),
+        "role": lambda m, a: (
+            m.translations.get("en", {}).get("role") if m.translations else None
         ),
         "translations": lambda m, a: json.dumps(
             m.jsonb_field, indent=4, ensure_ascii=False

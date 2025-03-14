@@ -66,7 +66,7 @@ async def create_announcement(
     data: CreateAnnouncement, session: AsyncSession, lang: Languages
 ) -> Sequence[Row[tuple[str, Any, Any, list[str], datetime, datetime]]]:
     if data.files is None:
-        data.files = [Pathlib("default.png").__str__()]
+        data.files = [Pathlib("static/default.png").__str__()]
     else:
         images = data.files
         upload_url = UPLOAD_DIR / date.today().strftime("%Y-%m-%d")

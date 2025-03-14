@@ -32,12 +32,12 @@ class Translations:
 
 class CreateTeacher(BaseModel):
     email: Annotated[EmailStr, Field(...)]
-    scopus_link: Annotated[str, Field(None, min_length=1, max_length=20)]
+    scopus_link: Annotated[str, Field(None, min_length=1)]
     translations: Annotated[
         Dict[Languages, Dict[str, str]],
         Field(..., example={lang.value: Translations.fields for lang in Languages}),
     ]
-    image: Annotated[str, Field(default="default.png")]
+    image: Annotated[str, Field(default="static/default.png")]
 
     @field_validator("translations")
     def validate_translations(
@@ -126,12 +126,12 @@ class GetTeachersWithResearchInterests(GetTeachers):
 
 class UpdateTeacher(CreateTeacher):
     email: Annotated[EmailStr, Field(None)]
-    scopus_link: Annotated[str, Field(None, min_length=1, max_length=20)]
+    scopus_link: Annotated[str, Field(None, min_length=1)]
     translations: Annotated[
         Dict[Languages, Dict[str, str]],
         Field(None, example={lang.value: Translations.fields for lang in Languages}),
     ]
-    image: Annotated[str, Field("default.png", exclude=True)]
+    image: Annotated[str, Field("static/default.png", exclude=True)]
 
     @field_validator("translations")
     def validate_translations(

@@ -3,12 +3,12 @@ from enum import Enum
 
 class StudyFormat(Enum):
     FULL_TIME = (
-        "Full-time study",
+        "Full-time education",
         "Kunduzgi ta’lim",
         "Очное обучение",
     )
-    PART_TIME = (
-        "Part-time study",
+    EVENING_EDUCAION = (
+        "Evening education",
         "Kechki ta’lim",
         "Вечернее обучение",
     )
@@ -18,8 +18,8 @@ class StudyFormat(Enum):
         "Дистанционное обучение",
     )
 
-    EXTRAMURAL_STUDY = (
-        "Extramural studies",
+    EXTRAMURAL_EDUCATION = (
+        "Extramural education",
         "Sirtqi ta’lim",
         "Заочное обучение",
     )

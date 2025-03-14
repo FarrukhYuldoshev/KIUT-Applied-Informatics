@@ -181,7 +181,7 @@ async def delete_teacher(teacher: Teachers, session: AsyncSession):
     stmt = delete(Teachers).where(Teachers.uuid == teacher.uuid)
     await session.execute(stmt)
     await session.commit()
-    if Pathlib(teacher.image).exists() and teacher.image != "default.png":
+    if Pathlib(teacher.image).exists() and teacher.image != "static/default.png":
         Pathlib(teacher.image).unlink()
 
 
