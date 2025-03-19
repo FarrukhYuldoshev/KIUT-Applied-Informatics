@@ -10,3 +10,4 @@ class TeachersImage(BaseModel):
 
 class Index(BaseModel):
     teachers: Annotated[List[TeachersImage], Field(..., description="Teachers image")]
+    count: int = Field(..., description="Number of teachers")

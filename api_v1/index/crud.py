@@ -1,4 +1,4 @@
-from sqlalchemy import select, case
+from sqlalchemy import select, case, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models import Teachers
@@ -37,5 +37,7 @@ async def get_teachers_image(session: AsyncSession, limit: int = 4):
             Roles.PROGRAMMER.level,
         ),
     )
+    cte = select(func.count(Teachers.uuid).label("count"))
+    count = await session.scalar(cte)
     stmt = select(Teachers).order_by(role_level_order.asc()).limit(limit)
-    return await session.scalars(stmt)
+    return await session.scalars(stmt), count

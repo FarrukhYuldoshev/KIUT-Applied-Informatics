@@ -5,9 +5,38 @@ from sqlalchemy.orm import selectinload
 from starlette import status
 
 from core.models.enumrators import Languages
-from .schemas import CreateAcademicProgram
+from .schemas import CreateAcademicProgram, GetAcademicProgramsWithSubjects
 from core.models import AcademicPrograms
 from uuid import UUID as uuid4
+from api_v1.subjects.crud import get_subjects_of_academic_program
+
+
+async def set_details_to_academic_program(
+    academic_program: AcademicPrograms,
+    session: AsyncSession,
+    language: Languages = None,
+):
+    subjects = await get_subjects_of_academic_program(
+        academic_program_id=academic_program.uuid, lang=language, session=session
+    )
+    response_model = GetAcademicProgramsWithSubjects(
+        uuid=academic_program.uuid,
+        year_of_study=academic_program.year_of_study,
+        subjects=subjects,
+    )
+    if language is not None:
+        response_model.title = academic_program.translations.get(language, {}).get(
+            "title"
+        )
+        response_model.program = academic_program.translations.get(language, {}).get(
+            "program"
+        )
+        response_model.study_format = academic_program.translations.get(
+            language, {}
+        ).get("study_format")
+    else:
+        response_model.translations = academic_program.translations
+    return response_model
 
 
 async def create_academic_program(data: CreateAcademicProgram, session: AsyncSession):
@@ -19,7 +48,7 @@ async def create_academic_program(data: CreateAcademicProgram, session: AsyncSes
     return result
 
 
-async def get_academic_program(uuid: uuid4, session: AsyncSession):
+async def get_academic_program(uuid: uuid4, session: AsyncSession) -> AcademicPrograms:
     stmt = (
         select(AcademicPrograms)
         .options(selectinload(AcademicPrograms.subjects))

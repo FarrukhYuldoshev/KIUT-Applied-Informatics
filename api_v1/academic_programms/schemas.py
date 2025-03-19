@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 from core.models.enumrators import Languages, StudyFormat
 
 from uuid import UUID as UUID4
+from api_v1.subjects.schemas import GetSubject
 
 
 class Translations:
@@ -29,7 +30,7 @@ class GetAcademicPrograms(BaseModel):
 
 
 class GetAcademicProgramsWithSubjects(GetAcademicPrograms):
-    subjects: Annotated[list[OnlyUUID], Field(default=None)]
+    subjects: Annotated[list[GetSubject], Field(default=None)]
 
 
 class CreateAcademicProgram(BaseModel, Translations):

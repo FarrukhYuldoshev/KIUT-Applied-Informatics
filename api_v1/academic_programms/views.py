@@ -35,7 +35,7 @@ async def create_academic_program(
 
 @router.get(
     "/",
-    response_model=list[GetAcademicProgramsWithSubjects],
+    response_model=list[GetAcademicPrograms],
     response_model_exclude_unset=True,
 )
 async def get_all_academic_programs(
@@ -43,15 +43,28 @@ async def get_all_academic_programs(
     session: AsyncSession = Depends(db_sessions.session_dependency),
 ):
     result = await crud.get_all_academic_programs(session=session)
-    programs: list[GetAcademicProgramsWithSubjects] = []
+    # programs: list[GetAcademicProgramsWithSubjects] = []
+    # if lang is not None:
+    #     for obj in result:
+    #         programs.append(
+    #             GetAcademicProgramsWithSubjects(
+    #                 subjects=[{"uuid": value.uuid} for value in obj.subjects],
+    #                 uuid=obj.uuid,
+    #                 year_of_study=obj.year_of_study,
+    #                 **obj.translations[lang.value]
+    #             )
+    #         )
+    #     return programs
     if lang is not None:
+        programs: list[GetAcademicPrograms] = []
         for obj in result:
             programs.append(
-                GetAcademicProgramsWithSubjects(
-                    subjects=[{"uuid": value.uuid} for value in obj.subjects],
+                GetAcademicPrograms(
                     uuid=obj.uuid,
+                    title=obj.translations.get(lang, {}).get("title"),
+                    study_format=obj.translations.get(lang, {}).get("study_format"),
+                    program=obj.translations.get(lang, {}).get("program"),
                     year_of_study=obj.year_of_study,
-                    **obj.translations[lang.value]
                 )
             )
         return programs
@@ -69,14 +82,10 @@ async def get_academic_program(
     lang: Languages = Query(alias="lang", default=None),
 ):
     result = await crud.get_academic_program(uuid, session=session)
-    if lang is not None:
-        return GetAcademicProgramsWithSubjects(
-            subjects=[{"uuid": value.uuid} for value in result.subjects],
-            uuid=result.uuid,
-            year_of_study=result.year_of_study,
-            **result.translations[lang.value]
-        )
-    return result
+    response = await crud.set_details_to_academic_program(
+        academic_program=result, language=lang, session=session
+    )
+    return response
 
 
 @router.delete("/")

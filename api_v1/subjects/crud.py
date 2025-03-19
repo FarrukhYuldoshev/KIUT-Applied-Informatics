@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from fastapi.params import Depends
 from sqlalchemy import insert, select, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,28 @@ from api_v1.subjects.schemas import CreateSubject
 from core.models import Subjects
 import asyncpg.exceptions
 from uuid import UUID as uuid4
+from .schemas import GetSubject
+from core.models.enumrators import Languages
+from core.settings import db_sessions
+
+
+def convert_sqlalchemy_model_to_base_model(
+    subject: Subjects, language: Languages = None
+):
+    response_model: GetSubject = GetSubject(
+        uuid=subject.uuid,
+        credits=subject.credits,
+        semester=subject.semester,
+        academic_program_id=subject.academic_program_id,
+    )
+    if language is not None:
+        response_model.name = subject.translations.get(language, {}).get("name")
+        response_model.description = subject.translations.get(language, {}).get(
+            "description"
+        )
+    else:
+        response_model.translations = subject.translations
+    return response_model
 
 
 async def create_subject(data: CreateSubject, session: AsyncSession):
@@ -29,6 +52,19 @@ async def create_subject(data: CreateSubject, session: AsyncSession):
                 status_code=400,
                 detail=f"Bad request",
             )
+
+
+async def get_subjects_of_academic_program(
+    academic_program_id: uuid4,
+    session: AsyncSession,
+    lang: Languages = None,
+):
+    stmt = select(Subjects).where(Subjects.academic_program_id == academic_program_id)
+    result = await session.scalars(stmt)
+    return [
+        convert_sqlalchemy_model_to_base_model(subject, language=lang)
+        for subject in result.all()
+    ]
 
 
 async def get_all_subjects(session: AsyncSession):
