@@ -28,7 +28,6 @@ app = FastAPI(
         "email": "codingmaestro.uz@gmail.com",
     },
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
