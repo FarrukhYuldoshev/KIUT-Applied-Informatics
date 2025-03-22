@@ -11,7 +11,7 @@ from . import settings
 
 class DBActions:
     def __init__(self):
-        self.engine = create_async_engine(url=settings.db_url, echo=True)
+        self.engine = create_async_engine(url=settings.db_url, echo=False)
         self.session_factory = async_sessionmaker(
             self.engine,
             class_=AsyncSession,
