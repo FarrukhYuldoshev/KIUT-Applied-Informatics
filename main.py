@@ -1,5 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
+from starlette.staticfiles import StaticFiles
+
 from api_v1 import router as api_router
 from demo_auth import jwt_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +28,8 @@ app = FastAPI(
         "email": "codingmaestro.uz@gmail.com",
     },
 )
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
