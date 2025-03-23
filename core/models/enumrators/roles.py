@@ -4,8 +4,8 @@ from enum import Enum
 class Roles(Enum):
     HEAD_OF_DEPARTMENT = (
         "Head of the department",
-        "Bo‘lim boshlig‘i",
-        "Заведующий отделом",
+        "Kafedra mudiri",
+        "Заведующий кафедрой",
         1,
     )
     PROFESSOR = ("Professor", "Professor", "Профессор", 2)
