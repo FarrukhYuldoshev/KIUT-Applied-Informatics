@@ -17,6 +17,7 @@ from admin import (
     WorkExperienceView,
 )
 from admin.auth import authentication_backend
+from auth_demo import auth_router
 
 app = FastAPI(
     title="Applied Informatics",
@@ -28,7 +29,6 @@ app = FastAPI(
         "email": "codingmaestro.uz@gmail.com",
     },
 )
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -48,7 +48,7 @@ admin.add_view(SubjectsView)
 admin.add_view(AcademicProgramsView)
 app.include_router(api_router)
 app.include_router(jwt_router)
-
+app.include_router(auth_router)
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
